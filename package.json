@@ -1,0 +1,32 @@
+{
+  "name": "academic-evaluation-scripts",
+  "version": "0.0.1",
+  "description": "Set of Google Scripts to automate the process of issuing and aggregating academic evaluations, e.g. questionnaire to collected feedback about courses.",
+  "main": "index.js",
+  "dependencies": {
+    "@types/google-apps-script": "0.0.53"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ccuffs/academic-evaluation-scripts.git"
+  },
+  "keywords": [
+    "google-scripts",
+    "google",
+    "gs",
+    "academic",
+    "uffs",
+    "computer",
+    "science"
+  ],
+  "author": "Fernando Bevilacqua",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ccuffs/academic-evaluation-scripts/issues"
+  },
+  "homepage": "https://github.com/ccuffs/academic-evaluation-scripts#readme"
+}

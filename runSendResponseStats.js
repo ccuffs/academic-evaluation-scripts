@@ -14,7 +14,7 @@ function runSendResponseStats() {
       aTextFewerResponses += s.title + "\n" + "Responses: " + s.responses + "\n" + "Summary: " + s.summaryUrl + "\n\n";
       
       // Create a file with a message directed to the students of a particular course
-      // regarding the evaluation questionnaire. This file will be attached to the e-mail.
+      // regarding the evaluation questionnaire. This file will be attached to an e-mail.
       var aBlob = createDirectStudentInvitationMailAttachment(s.form);
       aAttachments.push(aBlob);
     }

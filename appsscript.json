@@ -1,0 +1,6 @@
+{
+  "timeZone": "America/Sao_Paulo",
+  "dependencies": {
+  },
+  "exceptionLogging": "STACKDRIVER"
+}
