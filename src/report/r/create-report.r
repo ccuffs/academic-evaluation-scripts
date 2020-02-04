@@ -10,18 +10,22 @@ library(optparse);
 library(digest);
 library(ggplot2);
 library(magrittr);
-library(dplyr);
+library(plyr);
+library(scales);
+library(fs);
+
+theme_set(theme_bw());
 
 #####################################################################
 # The main program starts here
 ######################################################################
 
 option_list = list(
-    make_option(c("--dataset"), type="character", default="../../../data/2019.csv", help="Path to the CSV file to be used as a dataset. [default: %default]", metavar="<string>"),
+    make_option(c("--dataset"), type="character", default="../../../data/2019/from-json.csv", help="Path to the CSV file to be used as a dataset. [default: %default]", metavar="<string>"),
     make_option(c("--type"), type="character", default="individual", help="Type of report to be created. Available options are individual and group. [default: %default]", metavar="<string>"),
     make_option(c("--subject"), type="character", default="", help="TODO. [default: %default]", metavar="<string>"),    
-    make_option(c("--subject-column"), type="character", default="form_title", help="TODO. [default: %default]", metavar="<string>"),
-    make_option(c("--output-dir"), type="character", default="../../../results/", help="Directory where result files, e.g. plots, will be outputed. [default: %default]", metavar="<string>")
+    make_option(c("--subject-column"), type="character", default="form_id", help="TODO. [default: %default]", metavar="<string>"),
+    make_option(c("--output-dir"), type="character", default="../../../results/2019/", help="Directory where result files, e.g. plots, will be outputed. [default: %default]", metavar="<string>")
 );
 
 opt_parser = OptionParser(option_list=option_list);
@@ -43,21 +47,43 @@ type = opt$"type";
 subject = opt$"subject";
 subject_column = opt$"subject-column";
 
-cat(sprintf("dataset_path: %s\noutput_dir: %s\n", dataset_path, output_dir));
-
+# Load data
 data = load.data(dataset_path);
-forms = unique(data$form_title);
+form_ids = unique(data$form_id);
 
-for(form in forms) {
-    form_data = filter.data(data, subject_column, form);
-    available_questions = unique(form_data$question_title);
+cat(sprintf("Processing forms (%d in total)\n", length(form_ids)));
 
-    for(question in available_questions) {
-        question_data = filter.data(form_data, "question_title", question);
+for(form_id in form_ids) {
+    form_data = filter.data(data, "form_id", form_id);
+    available_questions = unique(form_data$question_number);
+    respondents = unique(form_data$respondent);
 
-        ggplot(question_data, aes(x=Accuracy)) +
-            geom_histogram(alpha=0.5, position="identity")
-        ggsave(sprintf("%s/%s-hist.pdf", output_dir, "test"));
+    cat(sprintf("  %s (respondents=%d)\n", form_id, length(respondents)));
 
+    for(question_number in available_questions) {
+        # Create a folder to house the plots
+        form_dir_path = sprintf("%s/%s", output_dir, form_id);
+        dir.create(form_dir_path, showWarnings = FALSE, recursive = TRUE);
+        report_file_path = sprintf("%s/%d.pdf", form_dir_path, question_number);
+
+        # Get the data
+        question_data = filter.data(form_data, "question_number", question_number);
+
+        if(question_number == 18) {
+            # Text related to suggestions, we can't plot.
+            report_file_path = sprintf("%s/%d.csv", form_dir_path, question_number);
+            write.csv(question_data, file=report_file_path, row.names = FALSE);
+            next;    
+        }
+
+        p = ggplot(question_data, aes(x = as.factor(response))) +
+                geom_bar(aes(y = (..count..)/sum(..count..))) +
+                geom_text(aes(y = ((..count..)/sum(..count..)), label = ..count..), stat = "count", vjust = -0.25) +
+                scale_y_continuous(labels = percent) +
+                labs(y = "Percentagem", x = "Respostas")
+        
+        suppressMessages(ggsave(report_file_path, p));
     }
 }
+
+cat(sprintf("All done!\n"));
