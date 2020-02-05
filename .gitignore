@@ -1,1 +1,5 @@
 /src/gscript/node_modules
+/data/
+/results/
+!/data/.gitkeep
+!/results/.gitkeep
