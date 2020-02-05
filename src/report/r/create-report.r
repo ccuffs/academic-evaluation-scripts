@@ -15,6 +15,7 @@ library(scales);
 library(fs);
 library(stringr);
 library(data.table);
+library(waffle);
 
 # Set default theme for ggplot2 charts
 theme_set(theme_bw());
@@ -25,8 +26,9 @@ theme_set(theme_bw());
 
 option_list = list(
     make_option(c("--dataset"), type="character", default="../../../data/2019/from-json.csv", help="Path to the CSV file to be used as a dataset. [default: %default]", metavar="<string>"),
+    make_option(c("--dataset-manifest"), type="character", default="../../../data/2019/from-json.csv.manifest.csv", help="Path to the CSV file to be used as the manifest for the loaded dataset. [default: %default]", metavar="<string>"),
     make_option(c("--type"), type="character", default="individual", help="Type of report to be created. Available options are individual and group. [default: %default]", metavar="<string>"),
-    make_option(c("--filter"), type="character", default="Fernando", help="TODO. [default: %default]", metavar="<string>"),    
+    make_option(c("--filter"), type="character", default="caimi", help="TODO. [default: %default]", metavar="<string>"),    
     make_option(c("--output-dir"), type="character", default="../../../results/2019/", help="Directory where result files, e.g. plots, will be outputed. [default: %default]", metavar="<string>")
 );
 
@@ -44,54 +46,47 @@ source("common-functions.r");
 
 # Things to be used
 dataset_path = opt$"dataset";
+dataset_manifest_path = opt$"dataset-manifest";
 output_dir = opt$"output-dir";
 type = opt$"type";
 filter = opt$"filter";
 
-# Load data
+# Load raw data
 data = load.data(dataset_path);
+manifest_data = load.data(dataset_manifest_path);
+
+data = adjust.modality.form.data(data, manifest_data);
+
+# Select data based on filter
 forms_data = filter.forms.using.title(data, filter);
 form_ids = unique(forms_data$form_id);
 
-cat(sprintf("Processing forms (%d in total)\n", length(form_ids)));
+cat(sprintf("\nGenerating individual reports (%d forms in total)\n", length(form_ids)));
 
 for(form_id in form_ids) {
+    meta = filter.data(manifest_data, "form_id", form_id);
     form_data = filter.data(data, "form_id", form_id);
-
-    meta = extract.metadata(form_data[1, "form_title"]);
-    available_questions = unique(form_data$question_number);
     respondents = unique(form_data$respondent);
+   
+    form_dir_path = sprintf("%s/%s", output_dir, form_id);
 
     cat(sprintf("- %s (respondents: %d)\n   %s (%s %s)\n   %s\n", form_id, length(respondents), meta["course_name"], meta["course_period"], meta["course_modality"], meta["course_responsible"]));
-
-    for(question_number in available_questions) {
-        # Create a folder to house the plots
-        form_dir_path = sprintf("%s/%s", output_dir, form_id);
-        dir.create(form_dir_path, showWarnings = FALSE, recursive = TRUE);
-        report_file_path = sprintf("%s/%d.pdf", form_dir_path, question_number);
-
-        # Get the data
-        question_data = filter.data(form_data, "question_number", question_number);
-
-        if(question_number == 18) {
-            # Text related to suggestions, we can't plot.
-            report_file_path = sprintf("%s/%d.csv", form_dir_path, question_number);
-            write.csv(question_data, file=report_file_path, row.names = FALSE);
-            next;
-        }
-
-        #response_order = c("excelente", "bom","regular", "ruim", "péssimo", "péssima");
-        #x_data = factor(question_data$response, levels=response_order);
-        x_data = factor(question_data$response);
-
-        p = ggplot(question_data, aes(x = x_data)) +
-                geom_bar(aes(y = (..count..)/sum(..count..))) +
-                geom_text(aes(y = ((..count..)/sum(..count..)), label = ..count..), stat = "count", vjust = -0.25) +
-                scale_y_continuous(labels = percent) +
-                labs(y = "Percentagem", x = "Respostas")
-        
-        suppressMessages(ggsave(report_file_path, p));
-    }
+    plot.form.data(form_data, form_dir_path, "");
 }
 
-cat(sprintf("All done!\n"));
+if(filter != "") {
+    cat(sprintf("\nGenerating overall reports (%d forms in total)\n", length(form_ids)));
+    
+    forms = unique(forms_data$form_id);
+    form_dir_path = sprintf("%s/%s", output_dir, filter);
+
+    cat(sprintf("- %s (forms: %d)\n", filter, length(forms)));
+    plot.form.data(forms_data, form_dir_path, "-overall");
+}
+
+cat(sprintf("\nGenerating global reports (%d forms in total)\n", length(unique(data$form_id))));
+    
+dir_path = sprintf("%s/%s", output_dir, "global");
+plot.form.data(data, dir_path, "-global");
+
+cat(sprintf("\nAll done!\n"));

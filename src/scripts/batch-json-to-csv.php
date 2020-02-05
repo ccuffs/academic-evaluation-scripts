@@ -129,6 +129,7 @@ foreach($aCollectedForms as $aFormId => $aFormTitle) {
     }
 
     $aMeta[$aFormId] = array(
+        'form_id'            => $aFormId,
         'season'             => $aMatches[0][1],
         'course_id'          => $aMatches[0][2],
         'course_name'        => trim($aMatches[0][3]),

@@ -1,4 +1,6 @@
 library(data.table);
+library(dplyr);
+library(sjmisc);
 
 #
 # This file contains several functions that are used by more
@@ -15,6 +17,17 @@ load.data <- function(file_path) {
     return(data);
 }
 
+adjust.modality.form.data <- function(data, manifest_data) {
+    data$modality = "";
+
+    for(id in unique(data$form_id)) {
+        meta = manifest_data[manifest_data$form_id == id,];
+        data[data$form_id == id, "modality"] = meta["course_modality"];
+    }
+    
+    return(data);
+}
+
 # Filter a dataframe based on the value of a particular column.
 filter.data <- function(data, column_name, column_value) {
     return(data[data[,column_name] == column_value,]);
@@ -26,23 +39,43 @@ filter.forms.using.title <- function(data, title_value) {
         return(data);
     } else {
         # Some filter is in place
-        filtered_data = data %>% dplyr::filter(form_title %like% title_value);
+        filtered_data = data %>% dplyr::filter(form_title %ilike% title_value);
         return(filtered_data);
     }
 }
 
-extract.metadata <- function(form_title) {
-    regex = "\\[(.*)\\].*: ([A-Z]{3}[0-9]{3}) -(.*)- ([0-9].*) Fase -?(.*) \\((.*)\\)";
-    matches = str_match(form_title, regex);
+plot.form.data <- function(form_data, output_dir, label) {
+    available_questions = unique(form_data$question_number);
 
-    meta = c(
-        "season" = matches[1, 2],
-        "course_id" = matches[1, 3],
-        "course_name" = matches[1, 4],
-        "course_period" = matches[1, 5],
-        "course_modality" = matches[1, 6],
-        "course_responsible" = matches[1, 7]
-    );
+    for(question_number in available_questions) {
+        # Create a folder to house the plots
+        dir.create(output_dir, showWarnings = FALSE, recursive = TRUE);
+        report_file_path = sprintf("%s/%d%s.pdf", output_dir, question_number, label);
 
-    return(meta);
+        # Get the data
+        question_data = filter.data(form_data, "question_number", question_number);
+
+        if(question_number == 18) {
+            # Text related to suggestions, we can't plot.
+            report_file_path = sprintf("%s/%d%s.csv", output_dir, question_number, label);
+            write.csv(question_data, file=report_file_path, row.names = FALSE);
+            next;
+        }
+
+        # Aggregate things
+        question_data_by_modality = question_data %>% group_by(modality);
+        aggregated_question_data_by_modality = question_data_by_modality %>% group_by(response) %>% summarise(
+            amount = n()
+        );
+
+        x_data = factor(question_data$response);
+
+        p = ggplot(question_data, aes(x = x_data)) +
+                geom_bar(aes(y = (..count..)/sum(..count..))) +
+                geom_text(aes(y = ((..count..)/sum(..count..)), label = ..count..), stat = "count", vjust = -0.25) +
+                scale_y_continuous(labels = percent) +
+                labs(y = "Percentagem", x = "Resposta")
+        
+        suppressMessages(ggsave(report_file_path, p));
+    }
 }
