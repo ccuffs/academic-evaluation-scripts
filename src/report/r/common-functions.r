@@ -32,7 +32,7 @@ filter.forms.using.title <- function(data, title_value) {
 }
 
 extract.metadata <- function(form_title) {
-    regex = "\\[(.*)\\].*: ([A-Z]{3}[0-9]{3}) - (.*) - ([0-9].*) (Noturno|Matutino|Vespertino) \\((.*)\\)";
+    regex = "\\[(.*)\\].*: ([A-Z]{3}[0-9]{3}) -(.*)- ([0-9].*) Fase -?(.*) \\((.*)\\)";
     matches = str_match(form_title, regex);
 
     meta = c(

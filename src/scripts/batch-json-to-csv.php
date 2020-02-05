@@ -42,6 +42,7 @@ if(!file_exists($aOutputDirPath)) {
 
 echo 'Collecting files at: ' . $aDataFolderPath . "\n";
 
+$aCollectedForms = array();
 $aData = array();
 
 if($aHandle = opendir($aDataFolderPath)) {
@@ -91,7 +92,8 @@ $aHeader = array();
 
 foreach($aColumns as $aColumnName) {
     // Convert CamelCase to snake_case in column names. From: https://stackoverflow.com/a/56560603/29827
-    $aHeader[] = strtolower(preg_replace("/([a-z])([A-Z])/", "$1_$2", $aColumnName));
+    $aSnakeCaseColumnName = strtolower(preg_replace("/([a-z])([A-Z])/", "$1_$2", $aColumnName));
+    $aHeader[] = $aSnakeCaseColumnName;
 }
 
 fputcsv($aOutputFile, $aHeader);
@@ -99,12 +101,64 @@ fputcsv($aOutputFile, $aHeader);
 foreach($aData as $aEntries) {
     echo sprintf("Writing output file... %3.1f%%\r", (float)$aBatch / $aTotalBatches * 100);
     foreach($aEntries as $aEntry) {
-        fputcsv($aOutputFile, array_values($aEntry));
+        $aValues = array_values($aEntry);
+        fputcsv($aOutputFile, $aValues);
+
+        // Keep track of all forms that we collected to create a manifest file
+        $aFormId = $aEntry['formId'];
+        if(!isset($aCollectedForms[$aFormId])) {
+            $aCollectedForms[$aFormId] = $aEntry['formTitle'];
+        }
     }
     $aBatch++;
 }
 
 fclose($aOutputFile);
+
+// Generate a manifest file
+
+$aMeta = array();
+$aMetaRegex = '/\[(.*)\].*: ([A-Z]{3}[0-9]{3}) -(.*)- ([0-9].*) Fase -?(.*) \((.*)\)/mi';
+
+foreach($aCollectedForms as $aFormId => $aFormTitle) {
+    preg_match_all($aMetaRegex, $aFormTitle, $aMatches, PREG_SET_ORDER, 0);
+
+    if(count($aMatches) == 0) {
+        echo '[WARN] Problem getting meta data from ' . $aFormTitle . "\n";
+        continue;
+    }
+
+    $aMeta[$aFormId] = array(
+        'season'             => $aMatches[0][1],
+        'course_id'          => $aMatches[0][2],
+        'course_name'        => trim($aMatches[0][3]),
+        'course_period'      => trim($aMatches[0][4]),
+        'course_modality'    => trim($aMatches[0][5]),
+        'course_responsible' => $aMatches[0][6]
+    );
+
+    // Get rid of anything wrong regarding names
+    $aMeta[$aFormId]['course_period'] = trim(str_replace(' -', '', $aMeta[$aFormId]['course_period']));
+}
+
+$aHasProducedHeader = false;
+$aManifestFilePath = $aOutputFilePath . '.manifest.csv';
+$aManifestFile = fopen($aManifestFilePath, 'w');
+
+if($aManifestFile === false) {
+    echo 'Unable to open file ' . $aManifestFilePath . "\n";
+    exit(7);
+}
+
+foreach($aMeta as $aFormId => $aFormMeta) {
+    if(!$aHasProducedHeader) {
+        $aHasProducedHeader = true;
+        fputcsv($aManifestFile, array_keys($aFormMeta));
+    }
+    fputcsv($aManifestFile, array_values($aFormMeta));
+}
+
+fclose($aManifestFile);
 
 echo "\n";
 echo 'All done!' . "\n";
