@@ -62,7 +62,7 @@ forms_data = filter.forms.using.title(data, filter);
 form_ids = unique(forms_data$form_id);
 
 if(type == "individual") {
-    cat(sprintf("\nGenerating individual reports (%d forms in total)\n", length(form_ids)));
+    cat(sprintf("Individual reports (%d forms in total)\n", length(form_ids)));
 
     for(form_id in form_ids) {
         meta = filter.data(manifest_data, "form_id", form_id);
@@ -76,7 +76,7 @@ if(type == "individual") {
     }
 
     if(filter != "") {
-        cat(sprintf("\nGenerating overall reports (%d forms in total)\n", length(form_ids)));
+        cat(sprintf("Overall reports (%d forms in total)\n", length(form_ids)));
         
         forms = unique(forms_data$form_id);
         form_dir_path = sprintf("%s/%s", output_dir, "overall");
@@ -87,10 +87,10 @@ if(type == "individual") {
 }
 
 if(type == "global") {
-    cat(sprintf("\nGenerating global reports (%d forms in total)\n", length(unique(data$form_id))));
+    cat(sprintf("Global reports (%d forms in total)\n", length(unique(data$form_id))));
         
     dir_path = sprintf("%s/%s", output_dir, "global");
     plot.form.data(data, dir_path, "-global");
 }
 
-cat(sprintf("\nReports are done!\n"));
+cat(sprintf("Reports are done!\n"));

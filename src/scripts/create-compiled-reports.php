@@ -56,44 +56,54 @@ $aCreateReportCmd = 'create-report.r';
 $aManifest = load_csv($aManifestFilePath);
 $aCurrentDir = getcwd();
 
-$aManifestPersons = array();
+$aManifestMeta = [
+    'persons'    => find_unique_manifest_entries($aManifest, 'course_responsible', array('type' => 'individual')),
+    'modalities' => find_unique_manifest_entries($aManifest, 'course_modality', array('type' => 'group')),
+    'periods'    => find_unique_manifest_entries($aManifest, 'course_period', array('type' => 'group')),
+    'program'    => array('cs_program' => array('name' => 'CS Program', 'key' => 'cs_program', 'type' => 'group', 'filter' => ''))
+];
 
-foreach($aManifest as $aKey => $aEntry) {
-    $aName = $aEntry['course_responsible'];
+echo 'Report info:'. "\n";
+echo ' - Date: '. date(DATE_RFC2822). "\n";
+echo ' - Dataset: '. $aDatasetFilePath. "\n";
+echo ' - Manifest: '. $aManifestFilePath. "\n";
+echo ' - Filter: '. $aFilter. "\n";
 
-    if(!isset($aManifestPersons[$aName])) {
-        $aManifestPersons[$aName] = array(
-            'name' => $aName,
-            'type' => 'individual'
-        );
+echo "\n";
+
+$aEntries = array();
+
+foreach($aManifestMeta as $aMetaKey => $aMetaEntries) {
+    $aNames = array_keys($aMetaEntries);
+    echo 'Available '.$aMetaKey.' ('.count($aNames).' in total):' . "\n";
+    
+    foreach($aMetaEntries as $aKey => $aItem) {
+        echo '- ' . $aItem['name'] . "\n"; 
     }
+    echo "\n";
+
+    $aEntries = array_merge($aEntries, $aMetaEntries);
 }
-
-$aNames = array_keys($aManifestPersons);
-
-echo 'Persons found in the manifest ('.count($aNames).' in total):' . "\n";
-echo '- ' . implode("\n- ", $aNames);
-echo "\n\n";
-
+ 
 echo 'Generating charts...' . "\n";
 
-foreach($aManifestPersons as $aEntry) {
-    $aPerson = $aEntry['name'];
-    $aNormalizedName = strtolower(str_replace(' ', '_', $aPerson));
-    $aPersonDir = $aOutputDirPath . '/' . $aNormalizedName;
-    $aPersonChartsDir = $aPersonDir . '/charts/';
+foreach($aEntries as $aEntry) {
+    $aName = $aEntry['name'];
+    $aKey = $aEntry['key'];
+    $aDir = $aOutputDirPath . '/' . $aKey;
+    $aChartsDir = $aDir . '/charts/';
 
-    if(!empty($aFilter) && stripos($aPerson, $aFilter) === false) {
+    if(!empty($aFilter) && stripos($aName, $aFilter) === false) {
         continue;
     }
 
-    echo "\n* " . $aPerson . "\n";
+    echo "* " . $aName . "\n";
 
-    @mkdir($aPersonChartsDir, 0777, true);
+    @mkdir($aChartsDir, 0777, true);
     
     $aOutput = array();
     $aReturnVar = -1;
-    $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --filter="'.$aPerson.'" --output-dir="'.$aPersonChartsDir.'" --type="'.$aEntry['type'].'"';
+    $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --filter="'.$aName.'" --output-dir="'.$aChartsDir.'" --type="'.$aEntry['type'].'"';
     
     @exec($aCmd, $aOutput, $aReturnVar);
     echo '    ' . implode("\n    ", $aOutput);
@@ -101,6 +111,8 @@ foreach($aManifestPersons as $aEntry) {
     if($aReturnVar != 0) {
         echo '[WARN] Failed to generate report!' . "\n";
     }
+
+    echo "\n\n";
 }
 
 echo 'Generating latex report files...' . "\n";

@@ -28,6 +28,28 @@ function load_csv($theFilePath) {
     return $aLines;
 }
 
+function find_unique_manifest_entries($theManifestArray, $theField = 'course_responsible', $aFieldsAdd = array())  {
+    $aUniqueEntries = array();
+
+    foreach($theManifestArray as $aKey => $aEntry) {
+        $aName = $aEntry[$theField];
+        $aKey = strtolower(remove_accents(str_replace(' ', '_', $aName)));
+    
+        if(!isset($aUniqueEntries[$aKey])) {
+            $aUniqueEntries[$aKey] = array(
+                'name' => $aName,
+                'key' => $aKey
+            );
+
+            foreach($aFieldsAdd as $aAddKey => $aAddValue) {
+                $aUniqueEntries[$aKey][$aAddKey] = $aAddValue;
+            }
+        }
+    }
+
+    return $aUniqueEntries;
+}
+
 /**
  * Unaccent the input string string. An example string like `ÀØėÿᾜὨζὅБю`
  * will be translated to `AOeyIOzoBY`. More complete than :
@@ -166,7 +188,7 @@ function remove_accents( $str, $utf8=true ) {
     'ო' => 'o','პ' => 'p','ჟ' => 'z','რ' => 'r','ს' => 's','ტ' => 't',
     'უ' => 'u','ფ' => 'p','ქ' => 'k','ღ' => 'g','ყ' => 'q','შ' => 's',
     'ჩ' => 'c','ც' => 't','ძ' => 'd','წ' => 't','ჭ' => 'c','ხ' => 'k',
-    'ჯ' => 'j','ჰ' => 'h'
+    'ჯ' => 'j','ჰ' => 'h', 'ª' => 'a'
     );
     $str = str_replace( array_keys( $transliteration ),
                         array_values( $transliteration ),
