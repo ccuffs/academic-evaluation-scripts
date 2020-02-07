@@ -27,8 +27,8 @@ theme_set(theme_bw());
 option_list = list(
     make_option(c("--dataset"), type="character", default="../../../data/2019/from-json.csv", help="Path to the CSV file to be used as a dataset. [default: %default]", metavar="<string>"),
     make_option(c("--dataset-manifest"), type="character", default="../../../data/2019/from-json.csv.manifest.csv", help="Path to the CSV file to be used as the manifest for the loaded dataset. [default: %default]", metavar="<string>"),
-    make_option(c("--type"), type="character", default="individual", help="Type of report to be created. Available options are individual and group. [default: %default]", metavar="<string>"),
-    make_option(c("--filter"), type="character", default="caimi", help="TODO. [default: %default]", metavar="<string>"),    
+    make_option(c("--type"), type="character", default="individual", help="Type of report to be created. Available options are individual and global. [default: %default]", metavar="<string>"),
+    make_option(c("--filter"), type="character", default="", help="TODO. [default: %default]", metavar="<string>"),    
     make_option(c("--output-dir"), type="character", default="../../../results/2019/", help="Directory where result files, e.g. plots, will be outputed. [default: %default]", metavar="<string>")
 );
 
@@ -61,32 +61,36 @@ data = adjust.modality.form.data(data, manifest_data);
 forms_data = filter.forms.using.title(data, filter);
 form_ids = unique(forms_data$form_id);
 
-cat(sprintf("\nGenerating individual reports (%d forms in total)\n", length(form_ids)));
+if(type == "individual") {
+    cat(sprintf("\nGenerating individual reports (%d forms in total)\n", length(form_ids)));
 
-for(form_id in form_ids) {
-    meta = filter.data(manifest_data, "form_id", form_id);
-    form_data = filter.data(data, "form_id", form_id);
-    respondents = unique(form_data$respondent);
-   
-    form_dir_path = sprintf("%s/%s", output_dir, form_id);
+    for(form_id in form_ids) {
+        meta = filter.data(manifest_data, "form_id", form_id);
+        form_data = filter.data(data, "form_id", form_id);
+        respondents = unique(form_data$respondent);
+    
+        form_dir_path = sprintf("%s/%s", output_dir, form_id);
 
-    cat(sprintf("- %s (respondents: %d)\n   %s (%s %s)\n   %s\n", form_id, length(respondents), meta["course_name"], meta["course_period"], meta["course_modality"], meta["course_responsible"]));
-    plot.form.data(form_data, form_dir_path, "");
+        cat(sprintf("- %s (respondents: %d)\n   %s (%s %s)\n   %s\n", form_id, length(respondents), meta["course_name"], meta["course_period"], meta["course_modality"], meta["course_responsible"]));
+        plot.form.data(form_data, form_dir_path, "");
+    }
+
+    if(filter != "") {
+        cat(sprintf("\nGenerating overall reports (%d forms in total)\n", length(form_ids)));
+        
+        forms = unique(forms_data$form_id);
+        form_dir_path = sprintf("%s/%s", output_dir, "overall");
+
+        cat(sprintf("- %s (forms: %d)\n", filter, length(forms)));
+        plot.form.data(forms_data, form_dir_path, "-overall");
+    }
 }
 
-if(filter != "") {
-    cat(sprintf("\nGenerating overall reports (%d forms in total)\n", length(form_ids)));
-    
-    forms = unique(forms_data$form_id);
-    form_dir_path = sprintf("%s/%s", output_dir, filter);
-
-    cat(sprintf("- %s (forms: %d)\n", filter, length(forms)));
-    plot.form.data(forms_data, form_dir_path, "-overall");
+if(type == "global") {
+    cat(sprintf("\nGenerating global reports (%d forms in total)\n", length(unique(data$form_id))));
+        
+    dir_path = sprintf("%s/%s", output_dir, "global");
+    plot.form.data(data, dir_path, "-global");
 }
 
-cat(sprintf("\nGenerating global reports (%d forms in total)\n", length(unique(data$form_id))));
-    
-dir_path = sprintf("%s/%s", output_dir, "global");
-plot.form.data(data, dir_path, "-global");
-
-cat(sprintf("\nAll done!\n"));
+cat(sprintf("\nReports are done!\n"));
