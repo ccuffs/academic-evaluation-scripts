@@ -7,6 +7,10 @@ library(sjmisc);
 # than one script.
 #
 
+wrapper <- function(x, ...) {
+  paste(strwrap(x, ...), collapse = "\n")
+}
+
 load.data <- function(file_path) {
     if (!file.exists(file_path)) {
     	stop(sprintf("[ERROR] File %s not found! \n", file_path), call.=FALSE);
@@ -69,10 +73,12 @@ plot.form.data <- function(form_data, output_dir, label) {
         );
 
         x_data = factor(question_data$response);
+        question_title = question_data[1, "question_title"];
 
         p = ggplot(question_data, aes(x = x_data)) +
                 geom_bar(aes(y = (..count..)/sum(..count..))) +
                 geom_text(aes(y = ((..count..)/sum(..count..)), label = ..count..), stat = "count", vjust = -0.25) +
+                ggtitle(wrapper(question_title, width = 70)) +
                 scale_y_continuous(labels = percent) +
                 labs(y = "Percentagem", x = "Resposta")
         
