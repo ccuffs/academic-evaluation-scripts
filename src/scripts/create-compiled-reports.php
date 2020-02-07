@@ -51,6 +51,7 @@ if(!file_exists($aManifestFilePath)) {
     exit(4);
 }
 
+$aDirLatexTemplate = dirname(__FILE__).'/../report/latex/program-template';
 $aDirRScripts = dirname(__FILE__).'/../report/r';
 $aCreateReportCmd = 'create-report.r';
 $aManifest = load_csv($aManifestFilePath);
@@ -84,8 +85,6 @@ foreach($aManifestMeta as $aMetaKey => $aMetaEntries) {
 
     $aEntries = array_merge($aEntries, $aMetaEntries);
 }
- 
-echo 'Generating charts...' . "\n";
 
 foreach($aEntries as $aEntry) {
     $aName = $aEntry['name'];
@@ -99,6 +98,8 @@ foreach($aEntries as $aEntry) {
 
     echo "* " . $aName . "\n";
 
+    echo 'Generating latex report files...' . "\n";
+
     @mkdir($aChartsDir, 0777, true);
     
     $aOutput = array();
@@ -109,17 +110,21 @@ foreach($aEntries as $aEntry) {
     echo '    ' . implode("\n    ", $aOutput);
 
     if($aReturnVar != 0) {
-        echo '[WARN] Failed to generate report!' . "\n";
+        echo '[WARN] Failed to generate charts!' . "\n\n";
+        continue;
     }
+    
+    echo 'Generating latex report files' . "\n";
+    $aOk = create_latex_report($aDirLatexTemplate, $aDir, $aEntry, $aManifest);
+
+    if(!$aOk) {
+        echo '[WARN] Failed to generate latex report!' . "\n";
+    }
+
+    echo 'Compiling latex reports...' . "\n";
+    compile_latex_report($aDir);
 
     echo "\n\n";
 }
 
-echo 'Generating latex report files...' . "\n";
-// TODO: make this
-
-echo 'Compiling latex reports...' . "\n";
-// TODO: make this
-
-echo "\n";
 echo 'All done!' . "\n";

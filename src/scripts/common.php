@@ -50,6 +50,168 @@ function find_unique_manifest_entries($theManifestArray, $theField = 'course_res
     return $aUniqueEntries;
 }
 
+function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theManifest) {
+    if(!file_exists($theLatexTemplate)) {
+        return false;
+    }
+
+    $aOk = xcopy($theLatexTemplate, $theWorkDir);
+
+    $aReportFilePath = $theWorkDir . '/report.tex';
+    $aReport = file_get_contents($aReportFilePath);
+/*
+
+    \subsection{First subsection}
+
+    \fullboxbegin
+    \lipsum[1]
+    \fullboxend
+
+    \leftboxbegin
+    \leftboxend
+
+    \begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{sky.jpg}
+    \caption{The sky is the limit.}
+    \end{figure}
+    
+    \frameboxbegin{Sample frame}
+    \lipsum[1]
+    \frameboxend
+    */
+    $aContent = '';
+
+    $aContent .= '\\section{First subsection}' . "\n";
+    $aContent .= 'Something' . "\n";
+    
+    $aContent .= '\\section{Avaliação por Componente Curricular}' . "\n";
+    $aContent .= 'Something' . "\n";
+
+    $aCharts = find_files($theWorkDir . '/charts', true);
+    
+    foreach($aCharts as $aFormId) {
+        $aChartInfo = get_manifest_entry_by_formid($aFormId, $theManifest);
+
+        if($aChartInfo == false) {
+            // TODO: work overall things herte
+        }
+
+        $aContent .= '\\subsection{'.$aChartInfo['course_name'].'}' . "\n";
+        $aContent .= 'Something ' . $aChartInfo['course_period'] . ' ' . $aChartInfo['course_modality'] . "\n\n";
+
+        $aQuestions = find_files($theWorkDir . '/charts/' . $aFormId);
+
+        foreach($aQuestions as $aFile) {
+            if(stripos($aFile, '.csv') !== false) {
+                // Text data
+                continue;
+            }
+            $aContent .= '\\begin{figure}' . "\n";
+            $aContent .= '\\centering' . "\n";
+            $aContent .= '\\includegraphics[width=0.5\\textwidth]{charts/'.$aFormId.'/'.$aFile.'}' . "\n";
+            $aContent .= '\\caption{Question '.$aFile.'}' . "\n";
+            $aContent .= '\\end{figure}' . "\n";
+            $aContent .= "\n";
+            $aContent .= 'Something ' . $aChartInfo['course_period'] . ' ' . $aChartInfo['course_modality'] . "\n\n";
+        }
+
+        $aContent .= "\n";
+    }
+
+    $aReport = str_replace('[TITLE]', 'Relatório de Avaliação (2019)', $aReport);
+    $aReport = str_replace('Avaliado: [AUTHOR]', $theEntry['name'] . '\\newline Curso: Ciência da Computação \\newline UFFS / Chapecó / SC' , $aReport);
+    $aReport = str_replace('[CONTENT]', $aContent, $aReport);
+
+    file_put_contents($aReportFilePath, $aReport);
+
+    return $aOk;
+}
+
+function get_manifest_entry_by_formid($theFormId, $theManifest) {
+    foreach($theManifest as $aIndex => $aManifestEntry) {
+        if($aManifestEntry['form_id'] == $theFormId) {
+            return $aManifestEntry;
+        }
+    }
+
+    return false;
+}
+
+
+function find_files($thePath, $theDirsOnly = false) {
+    $aRet = array();
+
+    if($aHandle = opendir($thePath)) {
+        while(($aEntry = readdir($aHandle)) !== false) {
+            $aEntryPath = $thePath . '/' . $aEntry;
+
+            if ($aEntry == '.' || $aEntry == '..' || ($theDirsOnly && !is_dir($aEntryPath))) {
+                continue;
+            }
+
+            $aRet[] = $aEntry;
+        }
+
+        closedir($aHandle);
+    }
+
+    return $aRet;
+}
+
+function compile_latex_report($theWorkDir, $theMainFile = 'report', $theCompiler = 'xelatex') {
+    $aOutput = array();
+    $aReturnVar = -1;
+    $aCmd = 'cd "'.$theWorkDir.'" && '.$theCompiler.' '.$theMainFile;
+    @exec($aCmd, $aOutput, $aReturnVar);
+
+    return $aReturnVar == 0;
+}
+
+/**
+ * Copy a file, or recursively copy a folder and its contents
+ * @author      Aidan Lister <aidan@php.net>
+ * @version     1.0.1
+ * @link        http://aidanlister.com/2004/04/recursively-copying-directories-in-php/
+ * @param       string   $source    Source path
+ * @param       string   $dest      Destination path
+ * @param       int      $permissions New folder creation permissions
+ * @return      bool     Returns true on success, false on failure
+ */
+function xcopy($source, $dest, $permissions = 0755)
+{
+    // Check for symlinks
+    if (is_link($source)) {
+        return symlink(readlink($source), $dest);
+    }
+
+    // Simple copy for a file
+    if (is_file($source)) {
+        return copy($source, $dest);
+    }
+
+    // Make destination directory
+    if (!is_dir($dest)) {
+        mkdir($dest, $permissions);
+    }
+
+    // Loop through the folder
+    $dir = dir($source);
+    while (false !== $entry = $dir->read()) {
+        // Skip pointers
+        if ($entry == '.' || $entry == '..') {
+            continue;
+        }
+
+        // Deep copy directories
+        xcopy("$source/$entry", "$dest/$entry", $permissions);
+    }
+
+    // Clean up
+    $dir->close();
+    return true;
+}
+
 /**
  * Unaccent the input string string. An example string like `ÀØėÿᾜὨζὅБю`
  * will be translated to `AOeyIOzoBY`. More complete than :
