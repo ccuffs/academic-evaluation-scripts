@@ -1,5 +1,54 @@
 <?php
 
+function create_manifest_file($theFilePath, $theCollectedForms) {
+    $aMeta = array();
+    $aMetaRegex = '/\[(.*)\].*: ([A-Z]{3}[0-9]{3}) -(.*)- ([0-9].*) Fase -?(.*) \((.*)\)/mi';
+
+    foreach($theCollectedForms as $aFormId => $aFormTitle) {
+        preg_match_all($aMetaRegex, $aFormTitle, $aMatches, PREG_SET_ORDER, 0);
+
+        if(count($aMatches) == 0) {
+            echo '[WARN] Problem getting meta data from ' . $aFormTitle . "\n";
+            continue;
+        }
+
+        $aMeta[$aFormId] = array(
+            'form_id'            => $aFormId,
+            'season'             => $aMatches[0][1],
+            'course_id'          => $aMatches[0][2],
+            'course_name'        => trim($aMatches[0][3]),
+            'course_period'      => trim($aMatches[0][4]),
+            'course_modality'    => trim($aMatches[0][5]),
+            'course_responsible' => $aMatches[0][6]
+        );
+
+        // Get rid of anything wrong regarding names
+        $aMeta[$aFormId]['course_period'] = trim(str_replace(' -', '', $aMeta[$aFormId]['course_period']));
+    }
+
+    write_csv($theFilePath, $aMeta);
+}
+
+function create_questions_file($theFilePath, $aCollectedQuestions) {
+    $aMeta = array();
+    
+    foreach($aCollectedQuestions as $aNumber => $aTitle) {
+        $aMeta[] = array(
+            'question_number' => $aNumber,
+            'question_title' => $aTitle
+        );
+    }
+
+    write_csv($theFilePath, $aMeta);
+}
+
+
+// Convert CamelCase to snake_case in column names. From: https://stackoverflow.com/a/56560603/29827
+function camelcase_to_snakecase($theString) {
+    $aNewString = strtolower(preg_replace("/([a-z])([A-Z])/", "$1_$2", $theString));
+    return $aNewString;
+} 
+
 function load_csv($theFilePath) {
     if(!file_exists($theFilePath)) {
         return false;
@@ -26,6 +75,26 @@ function load_csv($theFilePath) {
     }
 
     return $aLines;
+}
+
+function write_csv($theFilePath, $theArray) {
+    $aHasProducedHeader = false;
+    $aFile = fopen($theFilePath, 'w');
+
+    if($aFile === false) {
+        echo 'Unable to open file ' . $theFilePath . "\n";
+        exit(7);
+    }
+
+    foreach($theArray as $aKey => $aLine) {
+        if(!$aHasProducedHeader) {
+            $aHasProducedHeader = true;
+            fputcsv($aFile, array_keys($aLine));
+        }
+        fputcsv($aFile, array_values($aLine));
+    }
+
+    fclose($aFile);
 }
 
 function find_unique_manifest_entries($theManifestArray, $theField = 'course_responsible', $aFieldsAdd = array())  {

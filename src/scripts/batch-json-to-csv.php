@@ -7,6 +7,8 @@
  * Date: 2020-02-04
  */
 
+require_once dirname(__FILE__) . '/common.php';
+
 $aOptions = array(
     "input-dir:",
     "output-file:",
@@ -40,9 +42,10 @@ if(!file_exists($aOutputDirPath)) {
     exit(3);
 }
 
-echo 'Collecting files at: ' . $aDataFolderPath . "\n";
+echo 'Checking input dir: ' . $aDataFolderPath . "\n";
 
 $aCollectedForms = array();
+$aCollectedQuestions = array();
 $aData = array();
 
 if($aHandle = opendir($aDataFolderPath)) {
@@ -83,6 +86,11 @@ if($aOutputFile === false) {
     exit(5);
 }
 
+if(count($aData) == 0) {
+    echo 'No data has been collected. Anything wrong with --input-dir?' . "\n";
+    exit(6);
+}
+
 $aTotalBatches = count($aData);
 $aBatch = 1;
 
@@ -92,7 +100,7 @@ $aHeader = array();
 
 foreach($aColumns as $aColumnName) {
     // Convert CamelCase to snake_case in column names. From: https://stackoverflow.com/a/56560603/29827
-    $aSnakeCaseColumnName = strtolower(preg_replace("/([a-z])([A-Z])/", "$1_$2", $aColumnName));
+    $aSnakeCaseColumnName = camelcase_to_snakecase($aColumnName);
     $aHeader[] = $aSnakeCaseColumnName;
 }
 
@@ -109,57 +117,29 @@ foreach($aData as $aEntries) {
         if(!isset($aCollectedForms[$aFormId])) {
             $aCollectedForms[$aFormId] = $aEntry['formTitle'];
         }
+
+        // Keep track of all questions that we collected to create a questions file
+        $aQuestionNumber = $aEntry['questionNumber'];
+        $aQuestionTitle = $aEntry['questionTitle'];
+
+        if(!isset($aCollectedQuestions[$aQuestionNumber])) {
+            // We haven't seen this question yet.
+            $aCollectedQuestions[$aQuestionNumber] = $aQuestionTitle;
+        } else if($aCollectedQuestions[$aQuestionNumber] !== $aQuestionTitle) {
+            // We have seen this question already, but it has a different content this time.
+            echo '[WARN] Question #'.$aQuestionNumber.' found with different title!' . "\n";
+            echo ' - Current: "'.$aCollectedQuestions[$aQuestionNumber].'"' . "\n";
+            echo ' - New: "'.$aQuestionTitle.'"' . "\n";
+        }
     }
     $aBatch++;
 }
 
 fclose($aOutputFile);
 
-// Generate a manifest file
-
-$aMeta = array();
-$aMetaRegex = '/\[(.*)\].*: ([A-Z]{3}[0-9]{3}) -(.*)- ([0-9].*) Fase -?(.*) \((.*)\)/mi';
-
-foreach($aCollectedForms as $aFormId => $aFormTitle) {
-    preg_match_all($aMetaRegex, $aFormTitle, $aMatches, PREG_SET_ORDER, 0);
-
-    if(count($aMatches) == 0) {
-        echo '[WARN] Problem getting meta data from ' . $aFormTitle . "\n";
-        continue;
-    }
-
-    $aMeta[$aFormId] = array(
-        'form_id'            => $aFormId,
-        'season'             => $aMatches[0][1],
-        'course_id'          => $aMatches[0][2],
-        'course_name'        => trim($aMatches[0][3]),
-        'course_period'      => trim($aMatches[0][4]),
-        'course_modality'    => trim($aMatches[0][5]),
-        'course_responsible' => $aMatches[0][6]
-    );
-
-    // Get rid of anything wrong regarding names
-    $aMeta[$aFormId]['course_period'] = trim(str_replace(' -', '', $aMeta[$aFormId]['course_period']));
-}
-
-$aHasProducedHeader = false;
-$aManifestFilePath = $aOutputFilePath . '.manifest.csv';
-$aManifestFile = fopen($aManifestFilePath, 'w');
-
-if($aManifestFile === false) {
-    echo 'Unable to open file ' . $aManifestFilePath . "\n";
-    exit(7);
-}
-
-foreach($aMeta as $aFormId => $aFormMeta) {
-    if(!$aHasProducedHeader) {
-        $aHasProducedHeader = true;
-        fputcsv($aManifestFile, array_keys($aFormMeta));
-    }
-    fputcsv($aManifestFile, array_values($aFormMeta));
-}
-
-fclose($aManifestFile);
+// Generate secondary files
+create_manifest_file($aOutputFilePath . '.manifest.csv', $aCollectedForms);
+create_questions_file($aOutputFilePath . '.questions.csv', $aCollectedQuestions);
 
 echo "\n";
 echo 'All done!' . "\n";
