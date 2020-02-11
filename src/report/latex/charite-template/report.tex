@@ -8,13 +8,12 @@
 \usepackage{fancyhdr}
 
 % separate authors with \and 
-\author{Jane Doe \and 
-	John Doe %\and 
-	%Surname Name \and 
+\author{
+	[AUTHOR]
 }
 
 \title{[TITLE]}
-\subtitle{[AUTHOR]}
+\subtitle{[SUBTITLE]}
 
 %\documentType{Preprint (submitted version)}
 %\documentType{Postprint (accepted version)}
@@ -40,18 +39,20 @@
 %\termsOfUse{\CCBYNCND}
 %\termsOfUse{Example \URL{http://www.###.org} more text}
 
-\publisherPhrase{This is the peer reviewed version of the above mentioned article. This article may be used for non-commercial purposes in accordance with publisher policy for use of self-archived versions.}
+\publisherPhrase{[NOTICE]}
 
-\pagestyle{fancy}
 \fancyhead[LE,RO]{\itshape \nouppercase \rightmark}
 \fancyhead[LO,RE]{\itshape \nouppercase Chapter \arabic{chapter}}
 
 \begin{document}    
-	\charitetitle
+	\pagestyle{plain}
+    \charitetitle
 	
     \pagenumbering{arabic}
     \tableofcontents
     \clearpage
+
+    \pagestyle{fancy}
     
     [CONTENT]
 \end{document}

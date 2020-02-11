@@ -69,7 +69,7 @@ $aManifestMeta = [
     'persons'    => find_unique_manifest_entries($aManifest, 'course_responsible'),
     'modalities' => find_unique_manifest_entries($aManifest, 'course_modality'),
     'periods'    => find_unique_manifest_entries($aManifest, 'course_period'),
-//    'program'    => array('cs_program' => array('name' => 'CS Program', 'key' => 'cs_program', 'filter' => ''))
+    'program'    => array('cs_program' => array('name' => 'Curso de Ciência da Computação', 'key' => 'cs_program', 'filter' => ''))
 ];
 
 echo 'Report info:'. "\n";
@@ -117,12 +117,12 @@ foreach($aEntries as $aEntry) {
     $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --dataset-questions="'.$aQuestionsFilePath.'" --filter="'.$aFilter.'" --output-dir="'.$aChartsDir.'"';
     
     echo $aCmd . "\n";
-    //exec($aCmd, $aOutput, $aReturnVar);
+    exec($aCmd, $aOutput, $aReturnVar);
     echo '  ' . implode("\n  ", $aOutput);
 
     if($aReturnVar != 0) {
         echo '[ERROR] Failed to generate charts!' . "\n";
-       // continue;
+        continue;
     }
     
     echo 'Generating latex report files' . "\n";

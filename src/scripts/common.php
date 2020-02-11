@@ -129,13 +129,16 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
     $aReportFilePath = $theWorkDir . '/report.tex';
     $aReport = file_get_contents($aReportFilePath);
 
+    $aChapterIntro = latex_report_chapter_intro($theWorkDir, $theEntry, $theManifest, $theQuestions);
+    $aChapterAvaliation = latex_report_chapter_avaliation($theWorkDir, $theEntry, $theManifest, $theQuestions);
+
     $aContent = '';
 
     $aContent .= '\\chapter{Introdução}' . "\n";
-    $aContent .= 'Something' . "\n";
+    $aContent .= $aChapterIntro . "\n";
     
     $aContent .= '\\chapter{Avaliação dos Componentes Curriculares}' . "\n";
-    $aContent .= 'Something' . "\n";
+    $aContent .= $aChapterAvaliation . "\n";
 
     $aCharts = find_files($theWorkDir . '/charts', true);
     
@@ -147,18 +150,19 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
         if($aChartInfo == false) {
             $aContent .= '\\chapter{Avaliação Geral}' . "\n";
             $aContent .= '\\vspace*{5mm}' . "\n";
-            $aContent .= '\\section{'.(empty($theEntry['name']) ? 'Curso' : $theEntry['name']).'}' . "\n";
-            $aContent .= "Informação geral aqui.\n";
+            $aContent .= '\\section{'.$theEntry['name'].'}' . "\n";
+            $aContent .= "Essa seção apresenta uma compilação de todas as respostas dadas pelos discentes, agrupadas por pergunta, independente de CCR.\n";
         } else {
             $aContent .= '\\vspace*{5mm}' . "\n";            
             $aContent .= '\\section{'.$aChartInfo['course_name'].'}' . "\n";
-            $aContent .= "Informação sobre o curso.\n";
+            $aContent .= "Essa seção apresenta a avaliação do CCR \\emph{".$aChartInfo['course_name']."}, da ".$aChartInfo['course_period']." fase ".$aChartInfo['course_modality'].", sob responsabilidade de ".$aChartInfo['course_responsible'].", ministrado em ".$aChartInfo['season'].".\n";
         }
 
         $aContent .= '\\twocolumn' . "\n";
 
         foreach($theQuestions as $aQuestionInfo) {
             $aQuestionNumber = $aQuestionInfo['question_number'];
+            $aQuestionTitle = $aQuestionInfo['question_title'];
 
             if($aQuestionNumber == 18) {
                 continue;
@@ -170,9 +174,9 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
 
             if(file_exists($aRealFilePath)) {
                 if($aChartInfo == false) {
-                    $aCaption = 'Respostas referente à pergunta ' . $aQuestionNumber;
+                    $aCaption = $aQuestionTitle;
                 } else {
-                    $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].')';
+                    $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].') - ' . $aQuestionTitle;
                 }
 
                 $aContent .= '\\begin{figure}' . "\n";
@@ -188,10 +192,11 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
 
         $aContent .= '\\vspace*{5mm}' . "\n";            
         $aContent .= '\\subsection{Críticas e sugestões}' . "\n";
-        $aContent .= "Informação sobre críticas e sugestões e análises.\n";
+        $aContent .= "Essa seção apresenta os textos informados pelos discentes referentes a críticas e sugestões. Há um gráfico e uma nuvem de palavras mostrando os termos mais frequentes mencionados pelos discentes. É importante mencionar que os discentes não foram obrigados a prover críticas ou sugestões de forma escrita. Por essa razão, o número de respondentes pode ser ainda menor.\n";
 
         foreach($theQuestions as $aQuestionInfo) {
             $aQuestionNumber = $aQuestionInfo['question_number'];
+            $aQuestionTitle = $aQuestionInfo['question_title'];
             
             if($aQuestionNumber != 18) {
                 continue;
@@ -211,16 +216,17 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
 
                 if(file_exists($aFilePath)) {
                     if($aChartInfo == false) {
-                        $aCaption = 'Respostas referente à pergunta ' . $aQuestionNumber;
+                        $aCaption = $aQuestionTitle;
                     } else {
-                        $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].')';
+                        $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].') - ' . $aQuestionTitle;
                     }
 
+                    $aContent .= '\\begin{center}' . "\n";
                     $aContent .= '\\begin{figure}[h!]' . "\n";
-                    $aContent .= '\\centering' . "\n";
                     $aContent .= '\\includegraphics[width=0.9\\textwidth]{'.$aEntry.'}' . "\n";
                     $aContent .= '\\caption{'.$aCaption.'}' . "\n";
                     $aContent .= '\\end{figure}' . "\n";
+                    $aContent .= '\\end{center}' . "\n";
                     $aContent .= "\n";
                 }
             }
@@ -230,41 +236,133 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
             if(file_exists($aQuestionTextFile)) {
                 $aTextResponses = load_csv($aQuestionTextFile);
 
-                $aContent .= '\begin{center}' . "\n";
-                $aContent .= '\begin{longtable}{| p{16cm} |}' . "\n";
-                $aContent .= ' \hline' . "\n";
-                $aContent .= ' Comentário \\\\' . "\n";
-                $aContent .= ' \hline' . "\n";
+                $aContent .= '\\begin{center}' . "\n";
+                $aContent .= '\\begin{longtable}{| p{16cm} |}' . "\n";
+                $aContent .= '\\hline' . "\n";
+                $aContent .= ' \textbf{Comentário discente} \\\\' . "\n";
+                $aContent .= '\\hline' . "\n";
 
                 foreach($aTextResponses as $aInfo) {
                     if(empty($aInfo['response'])) {
                         continue;
                     }
-                    $aContent .= $aInfo['response'].' \\\\' . "\n";
-                    $aContent .= ' \hline' . "\n";
+                    $aContent .= latex_special_chars($aInfo['response']).' \footnote{'.latex_special_chars($aInfo['form_title']).'} \\\\' . "\n";
+                    $aContent .= '\\hline' . "\n";
                 }
 
-                $aContent .= '\caption{Table caption}' . "\n";
-                $aContent .= '\end{longtable}' . "\n";
-                $aContent .= '\end{center}' . "\n";
+                $aContent .= '\\hline' . "\n";
+                $aContent .= '\\caption{'.$aCaption.'}' . "\n";
+                $aContent .= '\\end{longtable}' . "\n";
+                $aContent .= '\\end{center}' . "\n";
             }
         }
 
         $aContent .= "\n";
     }
 
-    $aContent .= '\\onecolumn' . "\n";
+    $aCoverTitle = latex_report_cover_title($theWorkDir, $theEntry, $theManifest, $theQuestions);
+    $aCoverSubtitle = latex_report_cover_subtitle($theWorkDir, $theEntry, $theManifest, $theQuestions);
+    $aCoverAuthor = latex_report_cover_author($theWorkDir, $theEntry, $theManifest, $theQuestions);
+    $aCoverNotice = latex_report_cover_notice($theWorkDir, $theEntry, $theManifest, $theQuestions);
 
-    $aContent .= '\\chapter{Conclusão}' . "\n";
-    $aContent .= 'Something' . "\n";
-
-    $aReport = str_replace('[TITLE]', 'Relatório de Avaliação (2019)', $aReport);
-    $aReport = str_replace('[AUTHOR]', 'Docente: ' . $theEntry['name'] . '\\newline Curso: Ciência da Computação \\newline \\newline UFFS / Chapecó / SC' , $aReport);
+    $aReport = str_replace('[TITLE]', $aCoverTitle, $aReport);
+    $aReport = str_replace('[SUBTITLE]', $aCoverSubtitle, $aReport);
+    $aReport = str_replace('[AUTHOR]', $aCoverAuthor, $aReport);
+    $aReport = str_replace('[NOTICE]', $aCoverNotice, $aReport);
     $aReport = str_replace('[CONTENT]', $aContent, $aReport);
 
     file_put_contents($aReportFilePath, $aReport);
 
     return $aOk;
+}
+
+function latex_report_chapter_intro($theWorkDir, $theEntry, $theManifest, $theQuestions) {
+    $aText = '';
+    $aCharts = find_files($theWorkDir . '/charts', true);
+    $aTotalCharts = count($aCharts) - 1;
+
+    $aText .= 'Esse relatório foi elaborado pela Coordenação do Curso de Ciência da Computação da Universidade Federal da Fronteira Sul, campus Chapecó, SC. ';
+    $aText .= 'Ele contém um compilado das respostas dalas pelos discentes do curso durante a Semana de Avaliação de 2019/2. Cada discente respondeu um questionário online para cada Componente Curricular Regular (CCR) que estava participando. Um total de '.$aTotalCharts.' formulários online foram criados, um para cada um dos CCRs existentes no período.' . "\n\n\n";
+    $aText .= 'O conteúdo deste documento apresenta as avaliações feitas no(s) formulário(s) relacinado(s) a(o) \textbf{"'.$theEntry['name'].'"}.' . "\n\n\n";
+
+    $aText .= '\vspace{1cm}' . "\n\n";
+
+    $aText .= '\begin{center}' . "\n";
+    $aText .= 'Fernando Bevilacqua \newline \texttt{<fernando.bevilacqua@uffs.edu.br>} \newline \textbf{Coordenador}' . "\n\n";
+    $aText .= '\vspace{0.2cm}' . "\n\n";    
+    $aText .= 'Luciano Lores Caimi \newline \texttt{<lcaimi@uffs.edu.br>} \newline \textbf{Coordenador Adjunto}' . "\n";
+    $aText .= '\vspace{5cm}' . "\n\n";
+    $aText .= '\textbf{Data:} 11/02/2020' . "\n\n";    
+    $aText .= '\end{center}' . "\n";    
+
+    return $aText;
+}
+
+function latex_report_chapter_avaliation($theWorkDir, $theEntry, $theManifest, $theQuestions) {
+    $aCharts = find_files($theWorkDir . '/charts', true);
+    $aCourses = array();
+
+    foreach($aCharts as $aFormId) {
+        $aChartInfo = get_manifest_entry_by_formid($aFormId, $theManifest);
+
+        if($aChartInfo != false) {
+            $aCourses[] = $aChartInfo;
+        }
+    }
+
+    $aText = '';
+    $aText .= 'Esse capítulo mostra as avaliações feitas pelos discentes do curso referente aos Componentes Curriculares Regulares listados na Tabela \\ref{tab:courses-manifest}.' . "\n\n";
+    
+    $aText .= '\\begin{center}' . "\n";
+    $aText .= '\\begin{longtable}{| p{6cm} | p{4cm} | c | c | }' . "\n";
+    $aText .= '\\hline' . "\n";
+    $aText .= '\textbf{CCR} & \textbf{Docente} & \textbf{Fase} & \textbf{Turno} \\\\' . "\n";
+
+    foreach($aCourses as $aInfo) {
+        $aText .= latex_special_chars($aInfo['course_name']).' & ';
+        $aText .= latex_special_chars($aInfo['course_responsible']).' & ';
+        $aText .= latex_special_chars($aInfo['course_period']).' & ';
+        $aText .= latex_special_chars($aInfo['course_modality']);
+        $aText .= ' \\\\' . "\n";
+        $aText .= '\\hline' . "\n";
+    }
+
+    $aText .= '\\caption{Componentes Curriculares Regulares cujas avaliações estão presentes nesse relatório.}' . "\n";
+    $aText .= '\\label{tab:courses-manifest}' . "\n";
+    $aText .= '\\end{longtable}' . "\n";
+    $aText .= '\\end{center}' . "\n";
+
+    return $aText;
+}
+
+function latex_report_cover_title($theWorkDir, $theEntry, $theManifest, $theQuestions) {
+    return 'Relatório de Avaliação (2019.2)';
+}
+
+function latex_report_cover_subtitle($theWorkDir, $theEntry, $theManifest, $theQuestions) {
+    return $theEntry['name'];
+}
+
+function latex_report_cover_author($theWorkDir, $theEntry, $theManifest, $theQuestions) {
+    if(isset($theEntry['filter']) && !empty($theEntry['filter'])) {
+        $aCharts = find_files($theWorkDir . '/charts', true);
+        $aCourses = array();
+    
+        foreach($aCharts as $aFormId) {
+            $aChartInfo = get_manifest_entry_by_formid($aFormId, $theManifest);
+    
+            if($aChartInfo != false) {
+                $aCourses[] = $aChartInfo['course_name'];
+            }
+        }
+        return implode(' \and ', $aCourses);
+    } else {
+        return '';
+    }
+}
+
+function latex_report_cover_notice($theWorkDir, $theEntry, $theManifest, $theQuestions) {
+    return '\textbf{IMPORTANTE:} esse documento é CONFIDENCIAL e destinado ao docente envolvido ou à administração da Universidade Federal da Fronteira Sul. Se você deseja uma versão pública, escreva para \texttt{computacao.ch@uffs.edu.br}.';
 }
 
 function get_manifest_entry_by_formid($theFormId, $theManifest) {
@@ -495,4 +593,22 @@ function remove_accents( $str, $utf8=true ) {
                         array_values( $transliteration ),
                         $str);
     return $str;
+}
+
+function latex_special_chars($string) {
+    // https://stackoverflow.com/a/5422751/29827
+    $map = array( 
+        "\\"=>"|",
+        "#"=>"\\#",
+        "$"=>"\\$",
+        "%"=>"\\%",
+        "&"=>"\\&",
+        "~"=>"\\~{}",
+        "_"=>"\\_",
+        "^"=>"\\^{}",
+        "{"=>"\\{",
+        "}"=>"\\}",
+    );
+
+    return str_replace(array_keys($map), array_values($map), $string);
 }

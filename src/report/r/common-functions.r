@@ -60,7 +60,7 @@ plot.form.data.text.minining <- function(output_dir, question_data, question_tit
     # Text mining: http://www.sthda.com/english/wiki/text-mining-and-word-cloud-fundamentals-in-r-5-simple-steps-you-should-know
 
     text = question_data$response;
-    
+
     # Load the data as a corpus
     docs = Corpus(VectorSource(text));
 
@@ -92,6 +92,10 @@ plot.form.data.text.minining <- function(output_dir, question_data, question_tit
     v = sort(rowSums(m), decreasing=TRUE);
     d = data.frame(word = names(v), freq=v);
 
+    if(length(d$word) == 0) {
+        return(FALSE);
+    }
+
     # Generate the Word cloud
     wordcloud_file_path = sprintf("%s/%d%s.pdf", output_dir, question_number, label);
     pdf(wordcloud_file_path);
@@ -112,7 +116,7 @@ plot.form.data.text.minining <- function(output_dir, question_data, question_tit
     most_frequent_words = d[1:10,];
     p = ggplot(most_frequent_words, aes(x = word, y = freq)) +
             geom_bar(stat="identity") + 
-            labs(y = "Frequencia das palavras", x = "Palavras")
+            labs(y = "Frequencia das palavras", x = "Palavras mais frequentes")
     suppressMessages(ggsave(plot_file_path, p));
 
 }
