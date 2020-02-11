@@ -68,7 +68,7 @@ function load_csv($theFilePath) {
 
         foreach($aData as $aIndex => $aContent) {
             $aColumnName = $aHeader[$aIndex];
-            $aLine[$aColumnName] = $aContent;
+            $aLine[$aColumnName] = iconv(mb_detect_encoding($aContent, mb_detect_order(), true), "UTF-8", $aContent);
         }
 
         $aLines[] = $aLine;
@@ -128,61 +128,82 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
 
     $aReportFilePath = $theWorkDir . '/report.tex';
     $aReport = file_get_contents($aReportFilePath);
-/*
 
-    \subsection{First subsection}
-
-    \fullboxbegin
-    \lipsum[1]
-    \fullboxend
-
-    \leftboxbegin
-    \leftboxend
-
-    \begin{figure}[!h]
-    \centering
-    \includegraphics[width=0.5\textwidth]{sky.jpg}
-    \caption{The sky is the limit.}
-    \end{figure}
-    
-    \frameboxbegin{Sample frame}
-    \lipsum[1]
-    \frameboxend
-    */
     $aContent = '';
 
-    $aContent .= '\\section{Introdução}' . "\n";
+    $aContent .= '\\chapter{Introdução}' . "\n";
     $aContent .= 'Something' . "\n";
     
-    $aContent .= '\\section{Avaliação por Componente Curricular}' . "\n";
+    $aContent .= '\\chapter{Avaliação dos Componentes Curriculares}' . "\n";
+    $aContent .= 'Something' . "\n";
 
     $aCharts = find_files($theWorkDir . '/charts', true);
     
     foreach($aCharts as $aFormId) {
         $aChartInfo = get_manifest_entry_by_formid($aFormId, $theManifest);
 
+        $aContent .= '\\onecolumn' . "\n";
+
         if($aChartInfo == false) {
-            $aContent .= '\\section{Visão geral: '.$theEntry['name'].'}' . "\n";
-            $aContent .= '\\onecolumn' . "\n";
-            $aContent .= "Informação geral sobre o docente.\n";
+            $aContent .= '\\chapter{Avaliação Geral}' . "\n";
+            $aContent .= '\\vspace*{5mm}' . "\n";
+            $aContent .= '\\section{'.(empty($theEntry['name']) ? 'Curso' : $theEntry['name']).'}' . "\n";
+            $aContent .= "Informação geral aqui.\n";
         } else {
-            $aContent .= '\\twocolumn' . "\n";
-            $aContent .= '\\subsection{'.$aChartInfo['course_name'].'}' . "\n";
+            $aContent .= '\\vspace*{5mm}' . "\n";            
+            $aContent .= '\\section{'.$aChartInfo['course_name'].'}' . "\n";
+            $aContent .= "Informação sobre o curso.\n";
         }
 
         $aContent .= '\\twocolumn' . "\n";
 
         foreach($theQuestions as $aQuestionInfo) {
             $aQuestionNumber = $aQuestionInfo['question_number'];
-            $aQuestionTitle = $aQuestionInfo['question_title'];
+
+            if($aQuestionNumber == 18) {
+                continue;
+            }
+
+            $aCaption = '';
+            $aBaseFilePath = 'charts/' . $aFormId . '/' . $aQuestionNumber . '.pdf';
+            $aRealFilePath = $theWorkDir . '/' . $aBaseFilePath;
+
+            if(file_exists($aRealFilePath)) {
+                if($aChartInfo == false) {
+                    $aCaption = 'Respostas referente à pergunta ' . $aQuestionNumber;
+                } else {
+                    $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].')';
+                }
+
+                $aContent .= '\\begin{figure}' . "\n";
+                $aContent .= '\\centering' . "\n";
+                $aContent .= '\\includegraphics[width=0.5\\textwidth]{'.$aBaseFilePath.'}' . "\n";
+                $aContent .= '\\caption{'.$aCaption.'}' . "\n";
+                $aContent .= '\\end{figure}' . "\n";
+                $aContent .= "\n";
+            }
+        }
+
+        $aContent .= '\\onecolumn' . "\n";
+
+        $aContent .= '\\vspace*{5mm}' . "\n";            
+        $aContent .= '\\subsection{Críticas e sugestões}' . "\n";
+        $aContent .= "Informação sobre críticas e sugestões e análises.\n";
+
+        foreach($theQuestions as $aQuestionInfo) {
+            $aQuestionNumber = $aQuestionInfo['question_number'];
+            
+            if($aQuestionNumber != 18) {
+                continue;
+            }
 
             $aBaseQuestionChartFile = 'charts/' . $aFormId . '/' . $aQuestionNumber;
+
             $aQuestionCharts = array(
                 $aBaseQuestionChartFile . '.pdf',
                 $aBaseQuestionChartFile . '-a.pdf',
             );
             
-            $aQuestionTextFile = $theWorkDir . '/charts/' . $aFormId . '/' . $aQuestionNumber . '.csv';
             $aCaption = '';
                 
             foreach($aQuestionCharts as $aEntry) {
@@ -195,39 +216,37 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
                         $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].')';
                     }
 
-                    $aContent .= '\\begin{figure}' . "\n";
+                    $aContent .= '\\begin{figure}[h!]' . "\n";
                     $aContent .= '\\centering' . "\n";
-                    $aContent .= '\\includegraphics[width=0.5\\textwidth]{'.$aEntry.'}' . "\n";
+                    $aContent .= '\\includegraphics[width=0.9\\textwidth]{'.$aEntry.'}' . "\n";
                     $aContent .= '\\caption{'.$aCaption.'}' . "\n";
                     $aContent .= '\\end{figure}' . "\n";
                     $aContent .= "\n";
                 }
             }
 
+            $aQuestionTextFile = $theWorkDir . '/charts/' . $aFormId . '/' . $aQuestionNumber . '.csv';
+
             if(file_exists($aQuestionTextFile)) {
                 $aTextResponses = load_csv($aQuestionTextFile);
 
-                $aContent .= '\\onecolumn' . "\n";
-
                 $aContent .= '\begin{center}' . "\n";
-                $aContent .= '\begin{longtable}{| p{.05\textwidth} | p{.95\textwidth} |} ' . "\n";
+                $aContent .= '\begin{longtable}{| p{16cm} |}' . "\n";
                 $aContent .= ' \hline' . "\n";
-                $aContent .= '  & Comentário \\\\' . "\n";
+                $aContent .= ' Comentário \\\\' . "\n";
                 $aContent .= ' \hline' . "\n";
 
                 foreach($aTextResponses as $aInfo) {
                     if(empty($aInfo['response'])) {
                         continue;
                     }
-                    $aContent .= ' ' . ' & '.$aInfo['response'].' \\\\' . "\n";
+                    $aContent .= $aInfo['response'].' \\\\' . "\n";
                     $aContent .= ' \hline' . "\n";
                 }
 
                 $aContent .= '\caption{Table caption}' . "\n";
                 $aContent .= '\end{longtable}' . "\n";
                 $aContent .= '\end{center}' . "\n";
-
-                $aContent .= '\\twocolumn' . "\n";
             }
         }
 
@@ -236,7 +255,7 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
 
     $aContent .= '\\onecolumn' . "\n";
 
-    $aContent .= '\\section{Conclusão}' . "\n";
+    $aContent .= '\\chapter{Conclusão}' . "\n";
     $aContent .= 'Something' . "\n";
 
     $aReport = str_replace('[TITLE]', 'Relatório de Avaliação (2019)', $aReport);
@@ -279,10 +298,10 @@ function find_files($thePath, $theDirsOnly = false) {
     return $aRet;
 }
 
-function compile_latex_report($theWorkDir, $theMainFile = 'report', $theCompiler = 'xelatex') {
+function compile_latex_report($theWorkDir, $theMainFile = 'report', $theCompiler = 'pdflatex') {
     $aOutput = array();
     $aReturnVar = -1;
-    $aCmd = 'cd "'.$theWorkDir.'" && '.$theCompiler.' '.$theMainFile;
+    $aCmd = 'cd "'.$theWorkDir.'" && '.$theCompiler.' -jobname=STRING '.$theMainFile;
     @exec($aCmd, $aOutput, $aReturnVar);
 
     return $aReturnVar == 0;

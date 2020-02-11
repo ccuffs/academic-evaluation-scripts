@@ -58,7 +58,7 @@ if(!file_exists($aQuestionsFilePath)) {
     exit(5);
 }
 
-$aDirLatexTemplate = dirname(__FILE__).'/../report/latex/program-template';
+$aDirLatexTemplate = dirname(__FILE__).'/../report/latex/charite-template';
 $aDirRScripts = dirname(__FILE__).'/../report/r';
 $aCreateReportCmd = 'create-report.r';
 $aManifest = load_csv($aManifestFilePath);
@@ -117,12 +117,12 @@ foreach($aEntries as $aEntry) {
     $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --dataset-questions="'.$aQuestionsFilePath.'" --filter="'.$aFilter.'" --output-dir="'.$aChartsDir.'"';
     
     echo $aCmd . "\n";
-    exec($aCmd, $aOutput, $aReturnVar);
+    //exec($aCmd, $aOutput, $aReturnVar);
     echo '  ' . implode("\n  ", $aOutput);
 
     if($aReturnVar != 0) {
         echo '[ERROR] Failed to generate charts!' . "\n";
-        continue;
+       // continue;
     }
     
     echo 'Generating latex report files' . "\n";

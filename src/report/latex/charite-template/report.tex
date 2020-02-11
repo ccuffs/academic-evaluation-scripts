@@ -1,0 +1,57 @@
+\documentclass{charite}
+
+\usepackage{lipsum}
+%\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{fancyhdr}
+
+% separate authors with \and 
+\author{Jane Doe \and 
+	John Doe %\and 
+	%Surname Name \and 
+}
+
+\title{[TITLE]}
+\subtitle{[AUTHOR]}
+
+%\documentType{Preprint (submitted version)}
+%\documentType{Postprint (accepted version)}
+%\documentType{Article}
+%\documentType{Working Paper}
+%\documentType{Version of Record}
+
+%\versionAvailableAtDOI{10....}
+%\versionAvailableAtURN{urn:nbn:de:kobv:1234}
+%\versionAvailableAtRefubium{fub188/12345}
+%\versionAvailableAt{\URL{http://www.###.org}}
+
+%\citationDetails{Doe, Jane; Doe, John. Title: Subtitle. Journal. [Online] Publisher; Year; Volume. \DOI{10....}}
+
+%\yearOfPublication{....}
+
+%\termsOfUse{\AllRightsReserved}
+%\termsOfUse{\CCBY}
+%\termsOfUse{\CCBYSA}
+%\termsOfUse{\CCBYND}
+%\termsOfUse{\CCBYNC}
+%\termsOfUse{\CCBYNCSA}
+%\termsOfUse{\CCBYNCND}
+%\termsOfUse{Example \URL{http://www.###.org} more text}
+
+\publisherPhrase{This is the peer reviewed version of the above mentioned article. This article may be used for non-commercial purposes in accordance with publisher policy for use of self-archived versions.}
+
+\pagestyle{fancy}
+\fancyhead[LE,RO]{\itshape \nouppercase \rightmark}
+\fancyhead[LO,RE]{\itshape \nouppercase Chapter \arabic{chapter}}
+
+\begin{document}    
+	\charitetitle
+	
+    \pagenumbering{arabic}
+    \tableofcontents
+    \clearpage
+    
+    [CONTENT]
+\end{document}
