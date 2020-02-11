@@ -1,6 +1,10 @@
 library(data.table);
 library(dplyr);
 library(sjmisc);
+library(tm);
+library(SnowballC);
+library(wordcloud);
+library(RColorBrewer);
 
 #
 # This file contains several functions that are used by more
@@ -48,7 +52,72 @@ filter.forms.using.title <- function(data, title_value) {
     }
 }
 
-plot.form.data <- function(form_data, output_dir, label) {
+plot.form.data.text.minining <- function(output_dir, question_data, question_title, question_number, label) {
+    # First of all write the text to a file
+    report_file_path = sprintf("%s/%d%s.csv", output_dir, question_number, label);
+    write.csv(question_data, file=report_file_path, row.names = FALSE);
+
+    # Text mining: http://www.sthda.com/english/wiki/text-mining-and-word-cloud-fundamentals-in-r-5-simple-steps-you-should-know
+
+    text = question_data$response;
+    
+    # Load the data as a corpus
+    docs = Corpus(VectorSource(text));
+
+    toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x));
+    
+    docs = tm_map(docs, toSpace, "/");
+    docs = tm_map(docs, toSpace, "@");
+    docs = tm_map(docs, toSpace, "\\|");
+
+    # Convert the text to lower case
+    docs = tm_map(docs, content_transformer(tolower));
+    # Remove numbers
+    docs = tm_map(docs, removeNumbers);
+    # Remove english common stopwords
+    docs = tm_map(docs, removeWords, stopwords("portuguese"));
+    # Remove your own stop word
+    # specify your stopwords as a character vector
+    docs = tm_map(docs, removeWords, c("professor", "professora", "aluno", "aluna", "alunos", "alunas", "aula", "aulas"));
+    # Remove punctuations
+    docs = tm_map(docs, removePunctuation);
+    # Eliminate extra white spaces
+    docs = tm_map(docs, stripWhitespace);
+    # Text stemming
+    # docs <- tm_map(docs, stemDocument)
+
+    # Build a term-document matrix
+    dtm = TermDocumentMatrix(docs);
+    m = as.matrix(dtm);
+    v = sort(rowSums(m), decreasing=TRUE);
+    d = data.frame(word = names(v), freq=v);
+
+    # Generate the Word cloud
+    wordcloud_file_path = sprintf("%s/%d%s.pdf", output_dir, question_number, label);
+    pdf(wordcloud_file_path);
+
+    set.seed(1234)
+    wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+              max.words=200, random.order=FALSE, rot.per=0.35, 
+              colors=brewer.pal(8, "Dark2"));
+    
+    dev.off();
+
+    # Explore frequent terms and their associations
+    # findFreqTerms(dtm, lowfreq = 4);
+
+    # Plot word frequencies
+    plot_file_path = sprintf("%s/%d%s-a.pdf", output_dir, question_number, label);
+
+    most_frequent_words = d[1:10,];
+    p = ggplot(most_frequent_words, aes(x = word, y = freq)) +
+            geom_bar(stat="identity") + 
+            labs(y = "Frequencia das palavras", x = "Palavras")
+    suppressMessages(ggsave(plot_file_path, p));
+
+}
+
+plot.form.data <- function(form_data, output_dir, label="") {
     available_questions = unique(form_data$question_number);
 
     for(question_number in available_questions) {
@@ -61,8 +130,7 @@ plot.form.data <- function(form_data, output_dir, label) {
 
         if(question_number == 18) {
             # Text related to suggestions, we can't plot.
-            report_file_path = sprintf("%s/%d%s.csv", output_dir, question_number, label);
-            write.csv(question_data, file=report_file_path, row.names = FALSE);
+            plot.form.data.text.minining(output_dir, question_data, question_title, question_number, label);
             next;
         }
 

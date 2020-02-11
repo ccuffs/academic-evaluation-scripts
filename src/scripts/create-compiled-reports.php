@@ -22,17 +22,19 @@ if(isset($aArgs['h']) || isset($aArgs['help'])) {
     echo "Usage: \n";
     echo " php ".basename($_SERVER['PHP_SELF']) . " [options]\n\n";
     echo "Options:\n";
-    echo " --dataset=<path>          Path to the CSV file with all answers data.\n";
-    echo " --dataset-manifes=<path>  Path to the CSV file with answers manifest.\n";
-    echo " --filter=<str>            Name of the course responsible to filter data.\n";
-    echo " --output-dir=<path>       Path to the directory where reports will be written.\n";
-    echo " --help, -h                Show this help.\n";
+    echo " --dataset=<path>            Path to the CSV file with all answers data.\n";
+    echo " --dataset-manifest=<path>   Path to the CSV file with answers manifest.\n";
+    echo " --dataset-questions=<path>  Path to the CSV file with existing questions.\n";
+    echo " --filter=<str>              Name of the course responsible to filter data.\n";
+    echo " --output-dir=<path>         Path to the directory where reports will be written.\n";
+    echo " --help, -h                  Show this help.\n";
     echo "\n";
     exit(1);
 }
 
 $aDatasetFilePath = isset($aArgs['dataset']) ? $aArgs['dataset'] : dirname(__FILE__).'/../../data/2019/from-json.csv';
 $aManifestFilePath = isset($aArgs['dataset-manifest']) ? $aArgs['dataset-manifest'] : dirname(__FILE__).'/../../data/2019/from-json.csv.manifest.csv';
+$aQuestionsFilePath = isset($aArgs['dataset-questions']) ? $aArgs['dataset-questions'] : dirname(__FILE__).'/../../data/2019/from-json.csv.questions.csv';
 $aFilter = isset($aArgs['filter']) ? $aArgs['filter'] : '';
 $aOutputDirPath = isset($aArgs['output-dir']) ? $aArgs['output-dir'] : dirname(__FILE__).'/../../results/2019/';
 
@@ -51,23 +53,30 @@ if(!file_exists($aManifestFilePath)) {
     exit(4);
 }
 
+if(!file_exists($aQuestionsFilePath)) {
+    echo 'Unable to access dataset questions file: ' . $aQuestionsFilePath . "\n";
+    exit(5);
+}
+
 $aDirLatexTemplate = dirname(__FILE__).'/../report/latex/program-template';
 $aDirRScripts = dirname(__FILE__).'/../report/r';
 $aCreateReportCmd = 'create-report.r';
 $aManifest = load_csv($aManifestFilePath);
+$aQuestions = load_csv($aQuestionsFilePath);
 $aCurrentDir = getcwd();
 
 $aManifestMeta = [
-    'persons'    => find_unique_manifest_entries($aManifest, 'course_responsible', array('type' => 'individual')),
-    'modalities' => find_unique_manifest_entries($aManifest, 'course_modality', array('type' => 'group')),
-    'periods'    => find_unique_manifest_entries($aManifest, 'course_period', array('type' => 'group')),
-    'program'    => array('cs_program' => array('name' => 'CS Program', 'key' => 'cs_program', 'type' => 'group', 'filter' => ''))
+    'persons'    => find_unique_manifest_entries($aManifest, 'course_responsible'),
+    'modalities' => find_unique_manifest_entries($aManifest, 'course_modality'),
+    'periods'    => find_unique_manifest_entries($aManifest, 'course_period'),
+//    'program'    => array('cs_program' => array('name' => 'CS Program', 'key' => 'cs_program', 'filter' => ''))
 ];
 
 echo 'Report info:'. "\n";
 echo ' - Date: '. date(DATE_RFC2822). "\n";
 echo ' - Dataset: '. $aDatasetFilePath. "\n";
 echo ' - Manifest: '. $aManifestFilePath. "\n";
+echo ' - Questions: '. $aQuestionsFilePath. "\n";
 echo ' - Filter: '. $aFilter. "\n";
 
 echo "\n";
@@ -89,6 +98,7 @@ foreach($aManifestMeta as $aMetaKey => $aMetaEntries) {
 foreach($aEntries as $aEntry) {
     $aName = $aEntry['name'];
     $aKey = $aEntry['key'];
+    $aFilter = !isset($aEntry['filter']) ? $aName : $aEntry['filter'];
     $aDir = $aOutputDirPath . '/' . $aKey;
     $aChartsDir = $aDir . '/charts/';
 
@@ -104,25 +114,27 @@ foreach($aEntries as $aEntry) {
     
     $aOutput = array();
     $aReturnVar = -1;
-    $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --filter="'.$aName.'" --output-dir="'.$aChartsDir.'" --type="'.$aEntry['type'].'"';
+    $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --dataset-questions="'.$aQuestionsFilePath.'" --filter="'.$aFilter.'" --output-dir="'.$aChartsDir.'"';
     
-    @exec($aCmd, $aOutput, $aReturnVar);
-    echo '    ' . implode("\n    ", $aOutput);
+    echo $aCmd . "\n";
+    exec($aCmd, $aOutput, $aReturnVar);
+    echo '  ' . implode("\n  ", $aOutput);
 
     if($aReturnVar != 0) {
-        echo '[WARN] Failed to generate charts!' . "\n\n";
+        echo '[ERROR] Failed to generate charts!' . "\n";
         continue;
     }
     
     echo 'Generating latex report files' . "\n";
-    $aOk = create_latex_report($aDirLatexTemplate, $aDir, $aEntry, $aManifest);
+    $aOk = create_latex_report($aDirLatexTemplate, $aDir, $aEntry, $aManifest, $aQuestions);
 
     if(!$aOk) {
-        echo '[WARN] Failed to generate latex report!' . "\n";
+        echo '[ERROR] Failed to generate latex report!' . "\n";
+        continue;
     }
 
     echo 'Compiling latex reports...' . "\n";
-    compile_latex_report($aDir);
+    //compile_latex_report($aDir);
 
     echo "\n\n";
 }
