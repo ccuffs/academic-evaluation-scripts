@@ -176,7 +176,7 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
                 if($aChartInfo == false) {
                     $aCaption = $aQuestionTitle;
                 } else {
-                    $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].') - ' . $aQuestionTitle;
+                    $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].') - ' . $aChartInfo['course_responsible'] . ' - ' . $aQuestionTitle;
                 }
 
                 $aContent .= '\\begin{figure}' . "\n";
@@ -192,7 +192,7 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
 
         $aContent .= '\\vspace*{5mm}' . "\n";            
         $aContent .= '\\subsection{Críticas e sugestões}' . "\n";
-        $aContent .= "Essa seção apresenta os textos informados pelos discentes referentes a críticas e sugestões. Há um gráfico e uma nuvem de palavras mostrando os termos mais frequentes mencionados pelos discentes. É importante mencionar que os discentes não foram obrigados a prover críticas ou sugestões de forma escrita. Por essa razão, o número de respondentes pode ser ainda menor.\n";
+        $aContent .= "Essa seção apresenta os textos informados pelos discentes referentes a críticas e sugestões. Há um gráfico e uma nuvem de palavras mostrando os termos mais frequentes mencionados pelos discentes. É importante mencionar que os discentes não foram obrigados a prover críticas ou sugestões de forma escrita. Por essa razão, o número de respondentes pode ser ainda menor (ou inexistente).\n";
 
         foreach($theQuestions as $aQuestionInfo) {
             $aQuestionNumber = $aQuestionInfo['question_number'];
@@ -210,17 +210,17 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
             );
             
             $aCaption = '';
+
+            if($aChartInfo == false) {
+                $aCaption = $aQuestionTitle;
+            } else {
+                $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].') - ' . $aQuestionTitle;
+            }
                 
             foreach($aQuestionCharts as $aEntry) {
                 $aFilePath = $theWorkDir . '/' . $aEntry;
 
                 if(file_exists($aFilePath)) {
-                    if($aChartInfo == false) {
-                        $aCaption = $aQuestionTitle;
-                    } else {
-                        $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].') - ' . $aQuestionTitle;
-                    }
-
                     $aContent .= '\\begin{center}' . "\n";
                     $aContent .= '\\begin{figure}[h!]' . "\n";
                     $aContent .= '\\includegraphics[width=0.9\\textwidth]{'.$aEntry.'}' . "\n";
@@ -246,7 +246,8 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
                     if(empty($aInfo['response'])) {
                         continue;
                     }
-                    $aContent .= latex_special_chars($aInfo['response']).' \footnote{'.latex_special_chars($aInfo['form_title']).'} \\\\' . "\n";
+                    $aCourseSignature = str_replace('Avaliação Componente Curricular:', '', $aInfo['form_title']);
+                    $aContent .= latex_special_chars($aInfo['response']).' \footnote{'.latex_special_chars($aCourseSignature).'} \\\\' . "\n";
                     $aContent .= '\\hline' . "\n";
                 }
 
@@ -281,17 +282,19 @@ function latex_report_chapter_intro($theWorkDir, $theEntry, $theManifest, $theQu
     $aCharts = find_files($theWorkDir . '/charts', true);
     $aTotalCharts = count($aCharts) - 1;
 
-    $aText .= 'Esse relatório foi elaborado pela Coordenação do Curso de Ciência da Computação da Universidade Federal da Fronteira Sul, campus Chapecó, SC. ';
-    $aText .= 'Ele contém um compilado das respostas dalas pelos discentes do curso durante a Semana de Avaliação de 2019/2. Cada discente respondeu um questionário online para cada Componente Curricular Regular (CCR) que estava participando. Um total de '.$aTotalCharts.' formulários online foram criados, um para cada um dos CCRs existentes no período.' . "\n\n\n";
+    $aText .= 'Esse relatório foi elaborado pela Coordenação do Curso de Ciência da Computação da Universidade Federal da Fronteira Sul, campus Chapecó, SC. ' . "\n\n\n";
+    $aText .= 'Os dados apresentados no relatório são um compilado das respostas dalas pelos discentes do curso durante a Semana de Avaliação de 2019/2. Cada discente respondeu um questionário online para cada Componente Curricular Regular (CCR) que estava participando. Um total de '.$aTotalCharts.' formulários online foram criados, um para cada um dos CCRs existentes no período.' . "\n\n\n";
     $aText .= 'O conteúdo deste documento apresenta as avaliações feitas no(s) formulário(s) relacinado(s) a(o) \textbf{"'.$theEntry['name'].'"}.' . "\n\n\n";
 
     $aText .= '\vspace{1cm}' . "\n\n";
 
-    $aText .= '\begin{center}' . "\n";
-    $aText .= 'Fernando Bevilacqua \newline \texttt{<fernando.bevilacqua@uffs.edu.br>} \newline \textbf{Coordenador}' . "\n\n";
+    $aText .= '\textbf{Coordenador:} Fernando Bevilacqua \footnote{fernando.bevilacqua@uffs.edu.br} ' . "\n";
     $aText .= '\vspace{0.2cm}' . "\n\n";    
-    $aText .= 'Luciano Lores Caimi \newline \texttt{<lcaimi@uffs.edu.br>} \newline \textbf{Coordenador Adjunto}' . "\n";
+    $aText .= '\textbf{Coordenador Adjunto:} Luciano Lores Caimi \footnote{lcaimi@uffs.edu.br}' . "\n";
+
     $aText .= '\vspace{5cm}' . "\n\n";
+
+    $aText .= '\begin{center}' . "\n";
     $aText .= '\textbf{Data:} 11/02/2020' . "\n\n";    
     $aText .= '\end{center}' . "\n";    
 
@@ -314,9 +317,10 @@ function latex_report_chapter_avaliation($theWorkDir, $theEntry, $theManifest, $
     $aText .= 'Esse capítulo mostra as avaliações feitas pelos discentes do curso referente aos Componentes Curriculares Regulares listados na Tabela \\ref{tab:courses-manifest}.' . "\n\n";
     
     $aText .= '\\begin{center}' . "\n";
-    $aText .= '\\begin{longtable}{| p{6cm} | p{4cm} | c | c | }' . "\n";
+    $aText .= '\\begin{longtable}{| p{5.3cm} | p{6cm} | p{0.7cm} | p{1.3cm} | }' . "\n";
     $aText .= '\\hline' . "\n";
     $aText .= '\textbf{CCR} & \textbf{Docente} & \textbf{Fase} & \textbf{Turno} \\\\' . "\n";
+    $aText .= '\\hline' . "\n";
 
     foreach($aCourses as $aInfo) {
         $aText .= latex_special_chars($aInfo['course_name']).' & ';
