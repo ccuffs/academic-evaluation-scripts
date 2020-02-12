@@ -412,12 +412,20 @@ function find_files($thePath, $theDirsOnly = false) {
     return $aRet;
 }
 
-// TODO: pdflatex -jobname=file -interaction=nonstopmode -quiet report
-function compile_latex_report($theWorkDir, $theMainFile = 'report', $theCompiler = 'pdflatex') {
+function compile_latex_report($theWorkDir, $theOutputDir, $theMainFile = 'report', $theOutputFile = 'report', $theCompiler = 'pdflatex -interaction=nonstopmode -quiet') {
     $aOutput = array();
     $aReturnVar = -1;
-    $aCmd = 'cd "'.$theWorkDir.'" && '.$theCompiler.' -jobname=STRING '.$theMainFile;
+
+    $aCompilerCmd = $theCompiler . ' -jobname=' . $theOutputFile . ' ' . $theMainFile;
+    $aCmd = 'cd "'.$theWorkDir.'" && '.$aCompilerCmd. ' && '.$aCompilerCmd;
+
     @exec($aCmd, $aOutput, $aReturnVar);
+
+    if($aReturnVar == 0) {
+        $aSourcePDFFile = $theWorkDir . '/' . $theOutputFile . '.pdf';
+        $aDestPDFFile = $theOutputDir . '/' . $theOutputFile . '.pdf';
+        copy($aSourcePDFFile, $aDestPDFFile);
+    }
 
     return $aReturnVar == 0;
 }

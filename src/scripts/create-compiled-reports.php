@@ -16,7 +16,7 @@ $aOptions = array(
     "help"
 );
 
-$aArgs = getopt("h", $aOptions);
+$aArgs = getopt("hv", $aOptions);
 
 if(isset($aArgs['h']) || isset($aArgs['help'])) {
     echo "Usage: \n";
@@ -27,6 +27,7 @@ if(isset($aArgs['h']) || isset($aArgs['help'])) {
     echo " --dataset-questions=<path>  Path to the CSV file with existing questions.\n";
     echo " --filter=<str>              Name of the course responsible to filter data.\n";
     echo " --output-dir=<path>         Path to the directory where reports will be written.\n";
+    echo " --verbose, -v               Output more info during processing.\n";
     echo " --help, -h                  Show this help.\n";
     echo "\n";
     exit(1);
@@ -37,6 +38,8 @@ $aManifestFilePath = isset($aArgs['dataset-manifest']) ? $aArgs['dataset-manifes
 $aQuestionsFilePath = isset($aArgs['dataset-questions']) ? $aArgs['dataset-questions'] : dirname(__FILE__).'/../../data/2019/from-json.csv.questions.csv';
 $aFilter = isset($aArgs['filter']) ? $aArgs['filter'] : '';
 $aOutputDirPath = isset($aArgs['output-dir']) ? $aArgs['output-dir'] : dirname(__FILE__).'/../../results/2019/';
+
+$aVerbose = isset($aArgs['v']) || isset($aArgs['verbose']);
 
 if($aOutputDirPath == false || !file_exists($aOutputDirPath)) {
     echo 'Unable to access output folder: ' . $aOutputDirPath . "\n";
@@ -101,6 +104,8 @@ foreach($aManifestMeta as $aMetaKey => $aMetaEntries) {
     $aEntries = array_merge($aEntries, $aMetaEntries);
 }
 
+echo 'Generating files:' . "\n";
+
 foreach($aEntries as $aEntry) {
     $aName = $aEntry['name'];
     $aKey = $aEntry['key'];
@@ -113,8 +118,7 @@ foreach($aEntries as $aEntry) {
     }
 
     echo "* " . $aName . "\n";
-
-    echo 'Generating latex report files...' . "\n";
+    echo ' - Generating charts... ';
 
     @mkdir($aChartsDir, 0777, true);
     
@@ -122,27 +126,55 @@ foreach($aEntries as $aEntry) {
     $aReturnVar = -1;
     $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --dataset-questions="'.$aQuestionsFilePath.'" --filter="'.$aFilter.'" --output-dir="'.$aChartsDir.'"';
     
-    echo $aCmd . "\n";
-    exec($aCmd, $aOutput, $aReturnVar);
-    echo '  ' . implode("\n  ", $aOutput);
-
-    if($aReturnVar != 0) {
-        echo '[ERROR] Failed to generate charts!' . "\n";
-        continue;
+    if($aVerbose) {
+        echo "\n " . $aCmd . "\n";
     }
     
-    echo 'Generating latex report files' . "\n";
+    exec($aCmd, $aOutput, $aReturnVar);
+    
+    if($aVerbose) {
+        echo '  ' . implode("\n  ", $aOutput);
+    }
+
+    if($aReturnVar != 0) {
+        echo '[FAIL]' . "\n";
+        continue;
+    } else {
+        echo '[OK]' . "\n";
+    }
+    
+    echo ' - Generating latex reports... ';
     $aOk = create_latex_report($aDirLatexTemplate, $aDir, $aEntry, $aManifest, $aQuestions);
 
     if(!$aOk) {
-        echo '[ERROR] Failed to generate latex report!' . "\n";
+        echo '[FAIL]' . "\n";
         continue;
+    } else {
+        echo '[OK]' . "\n";
     }
 
-    echo 'Compiling latex reports...' . "\n";
-    //compile_latex_report($aDir);
+    if($aVerbose) {
+        echo "\n";
+    }
+}
 
-    echo "\n\n";
+echo 'All files were generated!' . "\n";
+echo "\n";
+echo 'Compiling latex reports:' . "\n";
+
+foreach($aEntries as $aEntry) {
+    $aName = $aEntry['name'];
+    $aKey = $aEntry['key'];
+    $aDir = $aOutputDirPath . '/' . $aKey;
+    $aOutDir = $aOutputDirPath . '/REPORTS/';
+
+    @mkdir($aOutDir, 0777, true);
+
+    echo "* " . $aName;
+    $aOk = compile_latex_report($aDir, $aOutDir, 'report', $aKey);
+
+    echo ' ' . ($aOk ? '[OK]' : '[FAIL]');
+    echo "\n";
 }
 
 echo 'All done!' . "\n";
