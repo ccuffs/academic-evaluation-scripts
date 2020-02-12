@@ -1,5 +1,17 @@
 <?php
 
+$gConfig = array();
+
+function config($theKey, $theDefaultValue = false) {
+    global $gConfig;
+    return isset($gConfig[$theKey]) ? $gConfig[$theKey] : $theDefaultValue;
+}
+
+function config_init($theValues) {
+    global $gConfig;
+    $gConfig = $theValues;
+}
+
 function create_manifest_file($theFilePath, $theCollectedForms) {
     $aMeta = array();
     $aMetaRegex = '/\[(.*)\].*: ([A-Z]{3}[0-9]{3}) -(.*)- ([0-9].*) Fase -?(.*) \((.*)\)/mi';
@@ -214,7 +226,7 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
             if($aChartInfo == false) {
                 $aCaption = $aQuestionTitle;
             } else {
-                $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].') - ' . $aQuestionTitle;
+                $aCaption = $aChartInfo['course_name'] . ' ('.$aChartInfo['course_period'].' Fase '.$aChartInfo['course_modality'].') - ' . $aChartInfo['course_responsible'] . ' - ' . $aQuestionTitle;
             }
                 
             foreach($aQuestionCharts as $aEntry) {
@@ -233,7 +245,7 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
 
             $aQuestionTextFile = $theWorkDir . '/charts/' . $aFormId . '/' . $aQuestionNumber . '.csv';
 
-            if(file_exists($aQuestionTextFile)) {
+            if(file_exists($aQuestionTextFile) && config('include_comments')) {
                 $aTextResponses = load_csv($aQuestionTextFile);
 
                 $aContent .= '\\begin{center}' . "\n";
@@ -400,6 +412,7 @@ function find_files($thePath, $theDirsOnly = false) {
     return $aRet;
 }
 
+// TODO: pdflatex -jobname=file -interaction=nonstopmode -quiet report
 function compile_latex_report($theWorkDir, $theMainFile = 'report', $theCompiler = 'pdflatex') {
     $aOutput = array();
     $aReturnVar = -1;

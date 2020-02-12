@@ -58,6 +58,12 @@ if(!file_exists($aQuestionsFilePath)) {
     exit(5);
 }
 
+$aConfig = array(
+    'include_comments' => false
+);
+
+config_init($aConfig);
+
 $aDirLatexTemplate = dirname(__FILE__).'/../report/latex/charite-template';
 $aDirRScripts = dirname(__FILE__).'/../report/r';
 $aCreateReportCmd = 'create-report.r';
