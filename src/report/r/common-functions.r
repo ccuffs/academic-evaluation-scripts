@@ -74,11 +74,16 @@ plot.form.data.text.minining <- function(output_dir, question_data, question_tit
     docs = tm_map(docs, content_transformer(tolower));
     # Remove numbers
     docs = tm_map(docs, removeNumbers);
-    # Remove english common stopwords
+    
+    # Remove common stopwords
+    pt_BR_stopwords_extra = load.data('stopwords/pt_BR/stopwords-extra.csv');
     docs = tm_map(docs, removeWords, stopwords("portuguese"));
+    docs = tm_map(docs, removeWords, pt_BR_stopwords_extra$word);
+    
     # Remove your own stop word
     # specify your stopwords as a character vector
-    docs = tm_map(docs, removeWords, c("professor", "professora", "aluno", "aluna", "alunos", "alunas", "aula", "aulas"));
+    docs = tm_map(docs, removeWords, c("professor", "professora"));
+
     # Remove punctuations
     docs = tm_map(docs, removePunctuation);
     # Eliminate extra white spaces
