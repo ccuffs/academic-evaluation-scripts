@@ -13,6 +13,7 @@ $aOptions = array(
     "dataset:",
     "dataset-manifest:",
     "output-dir:",
+    "text-questions:",
     "help"
 );
 
@@ -25,6 +26,8 @@ if(isset($aArgs['h']) || isset($aArgs['help'])) {
     echo " --dataset=<path>            Path to the CSV file with all answers data.\n";
     echo " --dataset-manifest=<path>   Path to the CSV file with answers manifest.\n";
     echo " --dataset-questions=<path>  Path to the CSV file with existing questions.\n";
+    echo " --text-questions=<str>      Comma-separated list of numbers that represent\n";
+    echo "                             questions whose responses must be processed as text.\n";
     echo " --filter=<str>              Name of the course responsible to filter data.\n";
     echo " --output-dir=<path>         Path to the directory where reports will be written.\n";
     echo " --verbose, -v               Output more info during processing.\n";
@@ -33,10 +36,11 @@ if(isset($aArgs['h']) || isset($aArgs['help'])) {
     exit(1);
 }
 
-$aDatasetFilePath = isset($aArgs['dataset']) ? $aArgs['dataset'] : dirname(__FILE__).'/../../data/2019/from-json.csv';
-$aManifestFilePath = isset($aArgs['dataset-manifest']) ? $aArgs['dataset-manifest'] : dirname(__FILE__).'/../../data/2019/from-json.csv.manifest.csv';
-$aQuestionsFilePath = isset($aArgs['dataset-questions']) ? $aArgs['dataset-questions'] : dirname(__FILE__).'/../../data/2019/from-json.csv.questions.csv';
+$aDatasetFilePath = isset($aArgs['dataset']) ? $aArgs['dataset'] : dirname(__FILE__).'/../../data/2019p/from-json.csv';
+$aManifestFilePath = isset($aArgs['dataset-manifest']) ? $aArgs['dataset-manifest'] : dirname(__FILE__).'/../../data/2019p/from-json.csv.manifest.csv';
+$aQuestionsFilePath = isset($aArgs['dataset-questions']) ? $aArgs['dataset-questions'] : dirname(__FILE__).'/../../data/2019p/from-json.csv.questions.csv';
 $aFilter = isset($aArgs['filter']) ? $aArgs['filter'] : '';
+$aTextModeQuestions = isset($aArgs['text-questions']) ? $aArgs['text-questions'] : '18'; // 31,39,53,54
 $aOutputDirPath = isset($aArgs['output-dir']) ? $aArgs['output-dir'] : dirname(__FILE__).'/../../results/2019/';
 
 $aVerbose = isset($aArgs['v']) || isset($aArgs['verbose']);
@@ -78,7 +82,7 @@ $aManifestMeta = [
     'persons'    => find_unique_manifest_entries($aManifest, 'course_responsible'),
     'modalities' => find_unique_manifest_entries($aManifest, 'course_modality'),
     'periods'    => find_unique_manifest_entries($aManifest, 'course_period'),
-    'program'    => array('cs_program' => array('name' => 'Curso de Ciência da Computação', 'key' => 'cs_program', 'filter' => ''))
+    'program'    => array('cs_program' => array('name' => 'Avaliação discente da Coordenação, Infra-estrutura e do Curso de Ciência da Computação', 'key' => 'CCCCH-2019.2-relatorio-avaliacao-coordenacao-infra-curso', 'filter' => ''))
 ];
 
 echo 'Report info:'. "\n";
@@ -87,6 +91,7 @@ echo ' - Dataset: '. $aDatasetFilePath. "\n";
 echo ' - Manifest: '. $aManifestFilePath. "\n";
 echo ' - Questions: '. $aQuestionsFilePath. "\n";
 echo ' - Filter: '. $aFilter. "\n";
+echo ' - Text questions: '. $aTextModeQuestions. "\n";
 
 echo "\n";
 
@@ -124,7 +129,7 @@ foreach($aEntries as $aEntry) {
     
     $aOutput = array();
     $aReturnVar = -1;
-    $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --dataset-questions="'.$aQuestionsFilePath.'" --filter="'.$aFilter.'" --output-dir="'.$aChartsDir.'"';
+    $aCmd = 'cd "'.$aDirRScripts.'" && rscript "'.$aCreateReportCmd.'" --dataset="'.$aDatasetFilePath.'" --dataset-manifest="'.$aManifestFilePath.'" --dataset-questions="'.$aQuestionsFilePath.'" --text-questions="'.$aTextModeQuestions.'" --filter="'.$aFilter.'" --output-dir="'.$aChartsDir.'"';
     
     if($aVerbose) {
         echo "\n " . $aCmd . "\n";
@@ -144,7 +149,7 @@ foreach($aEntries as $aEntry) {
     }
     
     echo ' - Generating latex reports... ';
-    $aOk = create_latex_report($aDirLatexTemplate, $aDir, $aEntry, $aManifest, $aQuestions);
+    $aOk = create_latex_report($aDirLatexTemplate, $aDir, $aEntry, $aManifest, $aQuestions, explode(',', $aTextModeQuestions));
 
     if(!$aOk) {
         echo '[FAIL]' . "\n";

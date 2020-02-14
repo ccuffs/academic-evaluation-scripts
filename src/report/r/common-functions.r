@@ -66,28 +66,28 @@ plot.form.data.text.minining <- function(output_dir, question_data, question_tit
 
     toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x));
     
-    docs = tm_map(docs, toSpace, "/");
-    docs = tm_map(docs, toSpace, "@");
-    docs = tm_map(docs, toSpace, "\\|");
+    docs = suppressWarnings(tm_map(docs, toSpace, "/"));
+    docs = suppressWarnings(tm_map(docs, toSpace, "@"));
+    docs = suppressWarnings(tm_map(docs, toSpace, "\\|"));
 
     # Convert the text to lower case
-    docs = tm_map(docs, content_transformer(tolower));
+    docs = suppressWarnings(tm_map(docs, content_transformer(tolower)));
     # Remove numbers
-    docs = tm_map(docs, removeNumbers);
+    docs = suppressWarnings(tm_map(docs, removeNumbers));
     
     # Remove common stopwords
     pt_BR_stopwords_extra = load.data('stopwords/pt_BR/stopwords-extra.csv');
-    docs = tm_map(docs, removeWords, stopwords("portuguese"));
-    docs = tm_map(docs, removeWords, pt_BR_stopwords_extra$word);
+    docs = suppressWarnings(tm_map(docs, removeWords, stopwords("portuguese")));
+    docs = suppressWarnings(tm_map(docs, removeWords, pt_BR_stopwords_extra$word));
     
     # Remove your own stop word
     # specify your stopwords as a character vector
-    docs = tm_map(docs, removeWords, c("professor", "professora"));
+    docs = suppressWarnings(tm_map(docs, removeWords, c("professor", "professora")));
 
     # Remove punctuations
-    docs = tm_map(docs, removePunctuation);
+    docs = suppressWarnings(tm_map(docs, removePunctuation));
     # Eliminate extra white spaces
-    docs = tm_map(docs, stripWhitespace);
+    docs = suppressWarnings(tm_map(docs, stripWhitespace));
     # Text stemming
     # docs <- tm_map(docs, stemDocument)
 
@@ -103,7 +103,7 @@ plot.form.data.text.minining <- function(output_dir, question_data, question_tit
 
     # Generate the Word cloud
     wordcloud_file_path = sprintf("%s/%d%s.pdf", output_dir, question_number, label);
-    pdf(wordcloud_file_path);
+    pdf(wordcloud_file_path, width = 8.5, height = 8.5);
 
     set.seed(1234)
     wordcloud(words = d$word, freq = d$freq, min.freq = 1,
@@ -126,7 +126,7 @@ plot.form.data.text.minining <- function(output_dir, question_data, question_tit
 
 }
 
-plot.form.data <- function(form_data, output_dir, label="") {
+plot.form.data <- function(form_data, output_dir, label="", text_mode_questions) {
     available_questions = unique(form_data$question_number);
 
     for(question_number in available_questions) {
@@ -137,10 +137,14 @@ plot.form.data <- function(form_data, output_dir, label="") {
         # Get the data
         question_data = filter.data(form_data, "question_number", question_number);
 
-        if(question_number == 18) {
+        if(question_number %in% text_mode_questions) {
+            # Remove empty text reponses
+            question_data =  question_data[!(is.na(question_data$response) | question_data$response==""), ];
+
             # Text related to suggestions, we can't plot.
             plot.form.data.text.minining(output_dir, question_data, question_title, question_number, label);
             next;
+
         }
 
         # Aggregate things

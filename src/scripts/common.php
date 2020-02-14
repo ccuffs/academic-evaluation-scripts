@@ -131,7 +131,7 @@ function find_unique_manifest_entries($theManifestArray, $theField = 'course_res
     return $aUniqueEntries;
 }
 
-function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theManifest, $theQuestions) {
+function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theManifest, $theQuestions, $theTextModeQuestions) {
     if(!file_exists($theLatexTemplate)) {
         return false;
     }
@@ -176,7 +176,7 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
             $aQuestionNumber = $aQuestionInfo['question_number'];
             $aQuestionTitle = $aQuestionInfo['question_title'];
 
-            if($aQuestionNumber == 18) {
+            if(in_array($aQuestionNumber, $theTextModeQuestions)) {
                 continue;
             }
 
@@ -210,7 +210,7 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
             $aQuestionNumber = $aQuestionInfo['question_number'];
             $aQuestionTitle = $aQuestionInfo['question_title'];
             
-            if($aQuestionNumber != 18) {
+            if(!in_array($aQuestionNumber, $theTextModeQuestions)) {
                 continue;
             }
 
@@ -235,7 +235,7 @@ function create_latex_report($theLatexTemplate, $theWorkDir, $theEntry, $theMani
                 if(file_exists($aFilePath)) {
                     $aContent .= '\\begin{center}' . "\n";
                     $aContent .= '\\begin{figure}[h!]' . "\n";
-                    $aContent .= '\\includegraphics[width=0.9\\textwidth]{'.$aEntry.'}' . "\n";
+                    $aContent .= '\\includegraphics[width=1.0\\textwidth]{'.$aEntry.'}' . "\n";
                     $aContent .= '\\caption{'.$aCaption.'}' . "\n";
                     $aContent .= '\\end{figure}' . "\n";
                     $aContent .= '\\end{center}' . "\n";
